@@ -1,0 +1,7 @@
+.directory-card {
+  position: relative;
+}
+.directory-card:hover .directory-card-details {
+  opacity: 1 !important;
+  max-height: 300px !important;
+} 
