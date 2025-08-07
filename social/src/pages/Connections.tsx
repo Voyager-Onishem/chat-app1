@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase-client';
-import { Box, Typography, CircularProgress, Alert, Button, Card, Avatar, Chip, Divider } from '@mui/joy';
+import { Box, Typography, CircularProgress, Alert, Button, Card, Avatar, Chip } from '@mui/joy';
 
 interface Connection {
   id: string;
@@ -116,23 +116,6 @@ export const Connections = () => {
     }
   };
 
-  const handleSendRequest = async (targetUserId: string) => {
-    try {
-      const { error } = await supabase
-        .from('connections')
-        .insert({
-          requester_id: currentUser.id,
-          addressee_id: targetUserId,
-          status: 'pending'
-        });
-
-      if (error) throw error;
-      setError('Connection request sent!');
-    } catch (err: any) {
-      setError(err.message);
-    }
-  };
-
   if (loading) return <Box sx={{ mt: 8, textAlign: 'center' }}><CircularProgress /></Box>;
   if (error) return <Box sx={{ mt: 8 }}><Alert color="danger">{error}</Alert></Box>;
 
@@ -155,29 +138,48 @@ export const Connections = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {pendingRequests.map((conn) => (
               <Card key={`${conn.requester.id}-${conn.addressee.id}`} sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Avatar
-                    src={conn.requester.profile_picture_url}
-                    alt={conn.requester.full_name}
-                    sx={{ width: 48, height: 48 }}
-                  >
-                    {conn.requester.full_name[0]}
-                  </Avatar>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography level="title-md">{conn.requester.full_name}</Typography>
-                    <Typography level="body-sm" color="neutral">
-                      {conn.requester.role.charAt(0).toUpperCase() + conn.requester.role.slice(1)}
-                    </Typography>
-                    {conn.requester.company && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: { xs: 'stretch', sm: 'center' }, 
+                  gap: 2,
+                  flexDirection: { xs: 'column', sm: 'row' }
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 2,
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    width: { xs: '100%', sm: 'auto' }
+                  }}>
+                    <Avatar
+                      src={conn.requester.profile_picture_url}
+                      alt={conn.requester.full_name}
+                      sx={{ width: 48, height: 48 }}
+                    >
+                      {conn.requester.full_name[0]}
+                    </Avatar>
+                    <Box sx={{ flex: 1, textAlign: { xs: 'center', sm: 'left' } }}>
+                      <Typography level="title-md">{conn.requester.full_name}</Typography>
                       <Typography level="body-sm" color="neutral">
-                        {conn.requester.job_title} at {conn.requester.company}
+                        {conn.requester.role.charAt(0).toUpperCase() + conn.requester.role.slice(1)}
                       </Typography>
-                    )}
+                      {conn.requester.company && (
+                        <Typography level="body-sm" color="neutral">
+                          {conn.requester.job_title} at {conn.requester.company}
+                        </Typography>
+                      )}
+                    </Box>
                   </Box>
-                  <Box sx={{ display: 'flex', gap: 1 }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: 1,
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    width: { xs: '100%', sm: 'auto' }
+                  }}>
                     <Button
                       size="sm"
                       color="success"
+                      fullWidth={{ xs: true, sm: false }}
                       onClick={() => handleConnectionAction(`${conn.requester.id}-${conn.addressee.id}`, 'accept')}
                     >
                       Accept
@@ -186,6 +188,7 @@ export const Connections = () => {
                       size="sm"
                       color="danger"
                       variant="outlined"
+                      fullWidth={{ xs: true, sm: false }}
                       onClick={() => handleConnectionAction(`${conn.requester.id}-${conn.addressee.id}`, 'reject')}
                     >
                       Decline
@@ -207,7 +210,19 @@ export const Connections = () => {
               const otherUser = conn.requester.id === currentUser?.id ? conn.addressee : conn.requester;
               return (
                 <Card key={`${conn.requester.id}-${conn.addressee.id}`} sx={{ p: 2 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                  <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: { xs: 'stretch', sm: 'center' }, 
+                  gap: 2,
+                  flexDirection: { xs: 'column', sm: 'row' }
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 2,
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    width: { xs: '100%', sm: 'auto' }
+                  }}>
                     <Avatar
                       src={otherUser.profile_picture_url}
                       alt={otherUser.full_name}
@@ -215,7 +230,7 @@ export const Connections = () => {
                     >
                       {otherUser.full_name[0]}
                     </Avatar>
-                    <Box sx={{ flex: 1 }}>
+                    <Box sx={{ flex: 1, textAlign: { xs: 'center', sm: 'left' } }}>
                       <Typography level="title-md">{otherUser.full_name}</Typography>
                       <Typography level="body-sm" color="neutral">
                         {otherUser.role.charAt(0).toUpperCase() + otherUser.role.slice(1)}
@@ -226,8 +241,9 @@ export const Connections = () => {
                         </Typography>
                       )}
                     </Box>
-                    <Chip color="success" size="sm">Connected</Chip>
                   </Box>
+                  <Chip color="success" size="sm" sx={{ alignSelf: { xs: 'center', sm: 'flex-start' } }}>Connected</Chip>
+                </Box>
                 </Card>
               );
             })}
@@ -242,26 +258,39 @@ export const Connections = () => {
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {sentRequests.map((conn) => (
               <Card key={`${conn.requester.id}-${conn.addressee.id}`} sx={{ p: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Avatar
-                    src={conn.addressee.profile_picture_url}
-                    alt={conn.addressee.full_name}
-                    sx={{ width: 48, height: 48 }}
-                  >
-                    {conn.addressee.full_name[0]}
-                  </Avatar>
-                  <Box sx={{ flex: 1 }}>
-                    <Typography level="title-md">{conn.addressee.full_name}</Typography>
-                    <Typography level="body-sm" color="neutral">
-                      {conn.addressee.role.charAt(0).toUpperCase() + conn.addressee.role.slice(1)}
-                    </Typography>
-                    {conn.addressee.company && (
+                <Box sx={{ 
+                  display: 'flex', 
+                  alignItems: { xs: 'stretch', sm: 'center' }, 
+                  gap: 2,
+                  flexDirection: { xs: 'column', sm: 'row' }
+                }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: 2,
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    width: { xs: '100%', sm: 'auto' }
+                  }}>
+                    <Avatar
+                      src={conn.addressee.profile_picture_url}
+                      alt={conn.addressee.full_name}
+                      sx={{ width: 48, height: 48 }}
+                    >
+                      {conn.addressee.full_name[0]}
+                    </Avatar>
+                    <Box sx={{ flex: 1, textAlign: { xs: 'center', sm: 'left' } }}>
+                      <Typography level="title-md">{conn.addressee.full_name}</Typography>
                       <Typography level="body-sm" color="neutral">
-                        {conn.addressee.job_title} at {conn.addressee.company}
+                        {conn.addressee.role.charAt(0).toUpperCase() + conn.addressee.role.slice(1)}
                       </Typography>
-                    )}
+                      {conn.addressee.company && (
+                        <Typography level="body-sm" color="neutral">
+                          {conn.addressee.job_title} at {conn.addressee.company}
+                        </Typography>
+                      )}
+                    </Box>
                   </Box>
-                  <Chip color="warning" size="sm">Pending</Chip>
+                  <Chip color="warning" size="sm" sx={{ alignSelf: { xs: 'center', sm: 'flex-start' } }}>Pending</Chip>
                 </Box>
               </Card>
             ))}

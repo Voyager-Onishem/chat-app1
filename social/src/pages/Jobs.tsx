@@ -3,16 +3,18 @@ import { supabase } from '../supabase-client';
 import { Box, Typography, CircularProgress, Alert, Button, Card, Avatar, Input, Textarea, Modal, ModalDialog, ModalClose, Chip } from '@mui/joy';
 import { Add as AddIcon, Business as BusinessIcon, LocationOn as LocationIcon } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
+import type { Job as JobType, UserProfile } from '../types';
 
 interface Job {
   id: string;
   title: string;
   company: string;
-  location?: string;
+  location: string;
   description: string;
   apply_url?: string;
   created_at: string;
-  posted_by: {
+  posted_by_user_id: string;
+  posted_by?: {
     full_name: string;
     profile_picture_url?: string;
     role: string;
@@ -27,7 +29,7 @@ interface CreateJobForm {
   apply_url: string;
 }
 
-export const Jobs = () => {
+const Jobs = () => {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -43,63 +45,78 @@ export const Jobs = () => {
       setLoading(true);
       setError('');
       
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        setError('Not logged in.');
+      // Add timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.warn('Jobs loading timeout - forcing loading to false');
         setLoading(false);
-        return;
-      }
+      }, 5000);
       
-      setCurrentUser(user);
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          setError('Not logged in.');
+          setLoading(false);
+          clearTimeout(timeoutId);
+          return;
+        }
+        
+        setCurrentUser(user);
 
-      // Fetch user's role
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profile) {
-        setUserRole(profile.role);
-      }
-
-      // Fetch jobs
-      const { data: jobsData, error } = await supabase
-        .from('jobs')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        setError(error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (jobsData && jobsData.length > 0) {
-        // Fetch poster profiles
-        const posterIds = [...new Set(jobsData.map(job => job.posted_by_user_id))];
-        const { data: profilesData } = await supabase
+        // Fetch user's role
+        const { data: profile } = await supabase
           .from('profiles')
-          .select('user_id, full_name, profile_picture_url, role')
-          .in('user_id', posterIds);
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
 
-        // Create profiles map
-        const profilesMap = new Map();
-        profilesData?.forEach(profile => {
-          profilesMap.set(profile.user_id, profile);
-        });
+        if (profile) {
+          setUserRole(profile.role);
+        }
 
-        // Add poster info to jobs
-        const jobsWithPosters = jobsData.map(job => ({
-          ...job,
-          posted_by: profilesMap.get(job.posted_by_user_id)
-        }));
+        // Fetch jobs
+        const { data: jobsData, error } = await supabase
+          .from('jobs')
+          .select('*')
+          .order('created_at', { ascending: false });
 
-        setJobs(jobsWithPosters);
-      } else {
-        setJobs([]);
+        if (error) {
+          setError(error.message);
+          setLoading(false);
+          clearTimeout(timeoutId);
+          return;
+        }
+
+        if (jobsData && jobsData.length > 0) {
+          // Fetch poster profiles
+          const posterIds = [...new Set(jobsData.map((job: any) => job.posted_by_user_id))];
+          const { data: profilesData } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, profile_picture_url, role')
+            .in('user_id', posterIds);
+
+          // Create profiles map
+          const profilesMap = new Map();
+          profilesData?.forEach((profile: any) => {
+            profilesMap.set(profile.user_id, profile);
+          });
+
+          // Add poster info to jobs
+          const jobsWithPosters = jobsData.map((job: any) => ({
+            ...job,
+            posted_by: profilesMap.get(job.posted_by_user_id)
+          }));
+
+          setJobs(jobsWithPosters);
+        } else {
+          setJobs([]);
+        }
+      } catch (error) {
+        console.error('Error fetching jobs:', error);
+        setError('Failed to load jobs');
+      } finally {
+        setLoading(false);
+        clearTimeout(timeoutId);
       }
-      setLoading(false);
     };
 
     fetchJobs();
@@ -136,7 +153,7 @@ export const Jobs = () => {
 
       if (jobsData && jobsData.length > 0) {
         // Fetch poster profiles
-        const posterIds = [...new Set(jobsData.map(job => job.posted_by_user_id))];
+        const posterIds = [...new Set(jobsData.map((job: any) => job.posted_by_user_id))];
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('user_id, full_name, profile_picture_url, role')
@@ -144,12 +161,12 @@ export const Jobs = () => {
 
         // Create profiles map
         const profilesMap = new Map();
-        profilesData?.forEach(profile => {
+        profilesData?.forEach((profile: any) => {
           profilesMap.set(profile.user_id, profile);
         });
 
         // Add poster info to jobs
-        const jobsWithPosters = jobsData.map(job => ({
+        const jobsWithPosters = jobsData.map((job: any) => ({
           ...job,
           posted_by: profilesMap.get(job.posted_by_user_id)
         }));
@@ -248,7 +265,7 @@ export const Jobs = () => {
                 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Chip size="sm" color="primary">
-                    {job.posted_by.role.charAt(0).toUpperCase() + job.posted_by.role.slice(1)}
+                    {job.posted_by?.role ? job.posted_by.role.charAt(0).toUpperCase() + job.posted_by.role.slice(1) : 'Unknown'}
                   </Chip>
                   {(userRole === 'admin' || (currentUser?.id === job.posted_by_user_id)) && (
                     <Button
@@ -270,14 +287,14 @@ export const Jobs = () => {
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Avatar
-                    src={job.posted_by.profile_picture_url}
-                    alt={job.posted_by.full_name}
+                    src={job.posted_by?.profile_picture_url}
+                    alt={job.posted_by?.full_name}
                     sx={{ width: 24, height: 24 }}
                   >
-                    {job.posted_by.full_name[0]}
+                    {job.posted_by?.full_name[0]}
                   </Avatar>
                   <Typography level="body-sm" color="neutral">
-                    Posted by {job.posted_by.full_name} • {new Date(job.created_at).toLocaleDateString()}
+                    Posted by {job.posted_by?.full_name} • {new Date(job.created_at).toLocaleDateString()}
                   </Typography>
                 </Box>
                 
@@ -367,4 +384,6 @@ export const Jobs = () => {
       </Modal>
     </Box>
   );
-}; 
+};
+
+export { Jobs }; 

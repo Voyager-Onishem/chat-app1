@@ -1,6 +1,8 @@
-import { Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import { AuthProvider, useAuth } from "./context/AuthContext";
+import { NotificationProvider } from "./context/NotificationContext";
+import Layout from "./components/Layout";
 import { Home } from "./pages/Home.tsx";
-import { Navbar } from "./components/Navbar";
 import { Login } from "./pages/Login";
 import { AdminLogin } from "./pages/AdminLogin";
 import { AlumniLogin } from "./pages/AlumniLogin";
@@ -9,49 +11,146 @@ import { Register } from "./pages/Register";
 import { Profile } from "./pages/Profile";
 import { Directory } from "./pages/Directory";
 import { Connections } from "./pages/Connections";
-import {AuthTest} from "./components/AuthTest"
-import { Messages } from "./pages/Messages";
+import Messages from "./pages/Messages";
 import { Announcements } from "./pages/Announcements";
 import { Jobs } from "./pages/Jobs";
 import { Events } from "./pages/Events";
 import { AdminDashboard } from "./pages/AdminDashboard";
-import { AuthDebug } from "./components/AuthDebug";
-import { SimpleAuthTest } from "./components/SimpleAuthTest";
-// import { BrowserRouter } from "react-router-dom";
-// import { CreatePostPage } from "./pages/CreatePostPage";
-// import { PostPage } from "./pages/PostPage";
-// import { CreateCommunityPage } from "./pages/CreateCommunityPage";
-// import { CommunitiesPage } from "./pages/CommunitiesPage";
-// import { CommunityPage } from "./pages/CommunityPage";
+import SystemDiagnostics from "./components/SystemDiagnostics";
+import ErrorBoundary from "./components/ErrorBoundary";
+
+// Protected Route Component
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  try {
+    const { user, loading } = useAuth();
+    
+    if (loading) {
+      return (
+        <div style={{ 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center', 
+          height: '100vh',
+          fontSize: '18px'
+        }}>
+          Loading...
+        </div>
+      );
+    }
+    
+    if (!user) {
+      return <Navigate to="/login" replace />;
+    }
+    
+    return <>{children}</>;
+  } catch (error) {
+    console.warn('Auth context not available in ProtectedRoute, redirecting to login');
+    return <Navigate to="/login" replace />;
+  }
+}
+
+// Public Route Component (redirects to home if already logged in)
+function PublicRoute({ children }: { children: React.ReactNode }) {
+  try {
+    const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+  
+  if (user) {
+    return <Navigate to="/" replace />;
+  }
+  
+  return <>{children}</>;
+  } catch (error) {
+    console.warn('Auth context not available in PublicRoute, allowing public access');
+    return <>{children}</>;
+  }
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      {/* Public Routes */}
+      <Route path="/login" element={
+        <PublicRoute>
+          <Login />
+        </PublicRoute>
+      } />
+      <Route path="/admin-login" element={
+        <PublicRoute>
+          <AdminLogin />
+        </PublicRoute>
+      } />
+      <Route path="/alumni-login" element={
+        <PublicRoute>
+          <AlumniLogin />
+        </PublicRoute>
+      } />
+      <Route path="/student-login" element={
+        <PublicRoute>
+          <StudentLogin />
+        </PublicRoute>
+      } />
+      <Route path="/register" element={
+        <PublicRoute>
+          <Register />
+        </PublicRoute>
+      } />
+
+      {/* Protected Routes with Layout */}
+      <Route path="/" element={
+        <ProtectedRoute>
+          <Layout />
+        </ProtectedRoute>
+      }>
+        <Route index element={<Home />} />
+        <Route path="profile" element={<Profile />} />
+        <Route path="directory" element={<Directory />} />
+        <Route path="connections" element={<Connections />} />
+        <Route path="messages" element={<Messages />} />
+        <Route path="announcements" element={<Announcements />} />
+        <Route path="jobs" element={<Jobs />} />
+        <Route path="events" element={<Events />} />
+        <Route path="admin-dashboard" element={<AdminDashboard />} />
+        <Route path="diagnostics" element={<SystemDiagnostics />} />
+      </Route>
+
+      {/* Catch-all route - redirect /home to / */}
+      <Route path="/home" element={<Navigate to="/" replace />} />
+      
+      {/* Catch-all route for any other unmatched routes */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
 
 function App() {
   return (
-    <div className="min-h-screen bg-black text-gray-100 transition-opacity duration-700 pt-20">
-      <Navbar />
-      <div className="container mx-auto px-4 py-6">
-      
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/debug" element={<AuthDebug />} />
-          <Route path="/simple-test" element={<SimpleAuthTest />} />
-          <Route path ="/auth-test" element = { <AuthTest/>} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/admin-login" element={<AdminLogin />} />
-          <Route path="/alumni-login" element={<AlumniLogin />} />
-          <Route path="/student-login" element={<StudentLogin />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/directory" element={<Directory />} />
-          <Route path="/connections" element={<Connections />} />
-          <Route path="/messages" element={<Messages />} />
-          <Route path="/announcements" element={<Announcements />} />
-          <Route path="/jobs" element={<Jobs />} />
-          <Route path="/events" element={<Events />} />
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        </Routes>
-{/* </BrowserRouter> */}
-      </div>
-    </div>
+    <ErrorBoundary>
+      <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <AuthProvider>
+          <ErrorBoundary>
+            <NotificationProvider>
+              <ErrorBoundary>
+                <AppRoutes />
+              </ErrorBoundary>
+            </NotificationProvider>
+          </ErrorBoundary>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
 

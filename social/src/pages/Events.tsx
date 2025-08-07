@@ -1,29 +1,26 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase-client';
-import { Box, Typography, CircularProgress, Alert, Button, Card, Avatar, Input, Textarea, Modal, ModalDialog, ModalClose, Chip, Select, Option } from '@mui/joy';
-import { Add as AddIcon, Event as EventIcon, LocationOn as LocationIcon, CalendarToday as CalendarIcon } from '@mui/icons-material';
+import { Box, Typography, CircularProgress, Alert, Button, Card, Avatar, Input, Textarea, Modal, ModalDialog, ModalClose, Chip } from '@mui/joy';
+import { Add as AddIcon, LocationOn as LocationIcon, CalendarToday as CalendarIcon } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
 
 interface Event {
   id: string;
   title: string;
-  description?: string;
-  location?: string;
+  description: string;
+  location: string;
   event_time: string;
   created_at: string;
-  created_by: {
+  created_by_user_id: string;
+  created_by?: {
     full_name: string;
     profile_picture_url?: string;
     role: string;
   };
-  rsvps: {
+  rsvps?: Array<{
     user_id: string;
-    status: 'attending' | 'not_attending' | 'interested';
-    user: {
-      full_name: string;
-      profile_picture_url?: string;
-    };
-  }[];
+    status: string;
+  }>;
 }
 
 interface CreateEventForm {
@@ -41,8 +38,7 @@ export const Events = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<string | null>(null);
-  const [rsvpStatus, setRsvpStatus] = useState<'attending' | 'not_attending' | 'interested'>('attending');
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateEventForm>();
 
   useEffect(() => {
@@ -50,95 +46,110 @@ export const Events = () => {
       setLoading(true);
       setError('');
       
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (userError || !user) {
-        setError('Not logged in.');
+      // Add timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        console.warn('Events loading timeout - forcing loading to false');
         setLoading(false);
-        return;
-      }
+      }, 5000);
       
-      setCurrentUser(user);
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        if (userError || !user) {
+          setError('Not logged in.');
+          setLoading(false);
+          clearTimeout(timeoutId);
+          return;
+        }
+        
+        setCurrentUser(user);
 
-      // Fetch user's role
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-
-      if (profile) {
-        setUserRole(profile.role);
-      }
-
-      // Fetch events
-      const { data: eventsData, error } = await supabase
-        .from('events')
-        .select('*')
-        .order('event_time', { ascending: true });
-
-      if (error) {
-        setError(error.message);
-        setLoading(false);
-        return;
-      }
-
-      if (eventsData && eventsData.length > 0) {
-        // Fetch creator profiles
-        const creatorIds = [...new Set(eventsData.map(event => event.created_by_user_id))];
-        const { data: creatorProfiles } = await supabase
+        // Fetch user's role
+        const { data: profile } = await supabase
           .from('profiles')
-          .select('user_id, full_name, profile_picture_url, role')
-          .in('user_id', creatorIds);
+          .select('role')
+          .eq('user_id', user.id)
+          .single();
 
-        // Fetch RSVPs for all events
-        const eventIds = eventsData.map(event => event.id);
-        const { data: rsvpsData } = await supabase
-          .from('event_rsvps')
+        if (profile) {
+          setUserRole(profile.role);
+        }
+
+        // Fetch events
+        const { data: eventsData, error } = await supabase
+          .from('events')
           .select('*')
-          .in('event_id', eventIds);
+          .order('event_time', { ascending: true });
 
-        // Fetch user profiles for RSVPs
-        const rsvpUserIds = [...new Set(rsvpsData?.map(rsvp => rsvp.user_id) || [])];
-        const { data: rsvpUserProfiles } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, profile_picture_url')
-          .in('user_id', rsvpUserIds);
+        if (error) {
+          setError(error.message);
+          setLoading(false);
+          clearTimeout(timeoutId);
+          return;
+        }
 
-        // Create maps
-        const creatorProfilesMap = new Map();
-        creatorProfiles?.forEach(profile => {
-          creatorProfilesMap.set(profile.user_id, profile);
-        });
+        if (eventsData && eventsData.length > 0) {
+          // Fetch creator profiles
+          const creatorIds = [...new Set(eventsData.map(event => event.created_by_user_id))];
+          const { data: creatorProfiles } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, profile_picture_url, role')
+            .in('user_id', creatorIds);
 
-        const rsvpUserProfilesMap = new Map();
-        rsvpUserProfiles?.forEach(profile => {
-          rsvpUserProfilesMap.set(profile.user_id, profile);
-        });
+          // Fetch RSVPs for all events
+          const eventIds = eventsData.map(event => event.id);
+          const { data: rsvpsData } = await supabase
+            .from('event_rsvps')
+            .select('*')
+            .in('event_id', eventIds);
 
-        // Group RSVPs by event
-        const rsvpsByEvent = new Map();
-        rsvpsData?.forEach(rsvp => {
-          if (!rsvpsByEvent.has(rsvp.event_id)) {
-            rsvpsByEvent.set(rsvp.event_id, []);
-          }
-          rsvpsByEvent.get(rsvp.event_id).push({
-            ...rsvp,
-            user: rsvpUserProfilesMap.get(rsvp.user_id)
+          // Fetch user profiles for RSVPs
+          const rsvpUserIds = [...new Set(rsvpsData?.map(rsvp => rsvp.user_id) || [])];
+          const { data: rsvpUserProfiles } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, profile_picture_url')
+            .in('user_id', rsvpUserIds);
+
+          // Create maps
+          const creatorProfilesMap = new Map();
+          creatorProfiles?.forEach(profile => {
+            creatorProfilesMap.set(profile.user_id, profile);
           });
-        });
 
-        // Add creator and RSVP info to events
-        const eventsWithDetails = eventsData.map(event => ({
-          ...event,
-          created_by: creatorProfilesMap.get(event.created_by_user_id),
-          rsvps: rsvpsByEvent.get(event.id) || []
-        }));
+          const rsvpUserProfilesMap = new Map();
+          rsvpUserProfiles?.forEach(profile => {
+            rsvpUserProfilesMap.set(profile.user_id, profile);
+          });
 
-        setEvents(eventsWithDetails);
-      } else {
-        setEvents([]);
+          // Group RSVPs by event
+          const rsvpsByEvent = new Map();
+          rsvpsData?.forEach(rsvp => {
+            if (!rsvpsByEvent.has(rsvp.event_id)) {
+              rsvpsByEvent.set(rsvp.event_id, []);
+            }
+            rsvpsByEvent.get(rsvp.event_id).push({
+              ...rsvp,
+              user: rsvpUserProfilesMap.get(rsvp.user_id)
+            });
+          });
+
+          // Add creator and RSVP info to events
+          const eventsWithDetails = eventsData.map(event => ({
+            ...event,
+            created_by: creatorProfilesMap.get(event.created_by_user_id),
+            rsvps: rsvpsByEvent.get(event.id) || []
+          }));
+
+          setEvents(eventsWithDetails);
+        } else {
+          setEvents([]);
+        }
+      } catch (error) {
+        console.error('Error fetching events:', error);
+        setError('Failed to load events');
+      } finally {
+        setLoading(false);
+        clearTimeout(timeoutId);
       }
-      setLoading(false);
     };
 
     fetchEvents();
@@ -353,12 +364,12 @@ export const Events = () => {
   };
 
   const getUserRSVPStatus = (event: Event) => {
-    const userRsvp = event.rsvps.find(rsvp => rsvp.user_id === currentUser?.id);
+    const userRsvp = event.rsvps?.find(rsvp => rsvp.user_id === currentUser?.id);
     return userRsvp?.status || null;
   };
 
   const getRSVPCount = (event: Event, status: 'attending' | 'not_attending' | 'interested') => {
-    return event.rsvps.filter(rsvp => rsvp.status === status).length;
+    return event.rsvps?.filter(rsvp => rsvp.status === status).length || 0;
   };
 
   if (loading) return <Box sx={{ mt: 8, textAlign: 'center' }}><CircularProgress /></Box>;
@@ -440,14 +451,14 @@ export const Events = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     <Avatar
-                      src={event.created_by.profile_picture_url}
-                      alt={event.created_by.full_name}
+                      src={event.created_by?.profile_picture_url}
+                      alt={event.created_by?.full_name}
                       sx={{ width: 24, height: 24 }}
                     >
-                      {event.created_by.full_name[0]}
+                      {event.created_by?.full_name[0]}
                     </Avatar>
                     <Typography level="body-sm" color="neutral">
-                      Created by {event.created_by.full_name} • {new Date(event.created_at).toLocaleDateString()}
+                      Created by {event.created_by?.full_name} • {new Date(event.created_at).toLocaleDateString()}
                     </Typography>
                   </Box>
                   

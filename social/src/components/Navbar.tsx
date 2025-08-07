@@ -1,54 +1,68 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from '../supabase-client';
+import { useAuth } from '../context/AuthContext';
+import { NotificationDropdown } from './NotificationDropdown';
+// import { ConnectionStatusIndicator } from './ConnectionStatusIndicator';
+import { Modal, ModalDialog, ModalClose, Typography, Button, Box, CircularProgress } from '@mui/joy';
+import { performCompleteLogout, clearAllStorage, clearAllCookies } from '../utils/auth-cleanup';
+import { checkAdminAccess } from '../utils/robust-query';
 
 export const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const isAuthenticated = !!user;
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsAuthenticated(!!user);
-      
+    const checkAdminStatus = async () => {
       if (user) {
-        // Check if user is admin
-        const { data: adminCheck } = await supabase
-          .from('admins')
-          .select('user_id')
-          .eq('user_id', user.id)
-          .single();
-        
-        setIsAdmin(!!adminCheck);
-      }
-    };
-    checkAuth();
-    // Listen for auth changes
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setIsAuthenticated(!!session?.user);
-      if (session?.user) {
-        const { data: adminCheck } = await supabase
-          .from('admins')
-          .select('user_id')
-          .eq('user_id', session.user.id)
-          .single();
-        
-        setIsAdmin(!!adminCheck);
+        // Check if user is admin using robust query
+        const isAdminUser = await checkAdminAccess(user.id);
+        setIsAdmin(isAdminUser);
       } else {
         setIsAdmin(false);
       }
-    });
-    return () => {
-      listener?.subscription.unsubscribe();
     };
-  }, []);
+    checkAdminStatus();
+  }, [user]);
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setIsAuthenticated(false);
-    navigate('/login');
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setIsLoggingOut(true);
+    try {
+      setShowLogoutModal(false);
+      await performCompleteLogout();
+      
+      // Force page reload for clean state
+      setTimeout(() => {
+        window.location.href = '/login';
+      }, 100);
+    } catch (error) {
+      console.error('Logout error:', error);
+      // Fallback cleanup
+      try {
+        await signOut();
+        clearAllStorage();
+        clearAllCookies();
+        window.location.href = '/login';
+      } catch (fallbackError) {
+        console.error('Fallback logout failed:', fallbackError);
+        window.location.href = '/login';
+      }
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
   };
 
   return (
@@ -117,20 +131,23 @@ export const Navbar = () => {
                 Admin Dashboard
               </Link>
             )}
+          </div>
+
+          {/* Desktop Auth & Notifications */}
+          <div className="hidden md:flex items-center space-x-4">
+            <ConnectionStatusIndicator />
+            {isAuthenticated && <NotificationDropdown />}
             {isAuthenticated && (
               <button
-                onClick={handleLogout}
-                className="ml-4 bg-red-500 px-3 py-1 rounded text-white hover:bg-red-600 transition-colors"
+                onClick={handleLogoutClick}
+                className="bg-red-500 px-3 py-1 rounded text-white hover:bg-red-600 transition-colors text-sm md:text-base"
               >
                 Logout
               </button>
             )}
           </div>
 
-          {/* Desktop Auth */}
-          <div className="hidden md:flex items-center">
-            {/* Auth logic handled above */}
-          </div>
+
 
           {/* Mobile Menu Button */}
           <div className="md:hidden">
@@ -228,16 +245,71 @@ export const Navbar = () => {
                       </Link>
                     )}
                     {isAuthenticated && (
-                      <button
-                        onClick={handleLogout}
-                        className="block w-full text-left bg-red-500 px-3 py-2 rounded-md text-base font-medium text-white hover:bg-red-600 mt-2"
-                      >
-                        Logout
-                      </button>
+                      <>
+                        <div className="px-3 py-2">
+                          <NotificationDropdown />
+                        </div>
+                        <button
+                          onClick={handleLogoutClick}
+                          className="block w-full text-left bg-red-500 px-3 py-2 rounded-md text-base font-medium text-white hover:bg-red-600 mt-2 min-h-[44px]"
+                        >
+                          Logout
+                        </button>
+                      </>
                     )}
                   </div>
         </div>
       )}
+
+      {/* Logout Confirmation Modal */}
+      <Modal open={showLogoutModal} onClose={handleLogoutCancel}>
+        <ModalDialog
+          aria-labelledby="logout-modal-title"
+          aria-describedby="logout-modal-description"
+          sx={{
+            maxWidth: 400,
+            width: '90vw',
+          }}
+        >
+          <ModalClose onClick={handleLogoutCancel} />
+          <Typography
+            id="logout-modal-title"
+            component="h2"
+            level="h4"
+            textColor="inherit"
+            fontWeight="lg"
+            mb={1}
+          >
+            Confirm Logout
+          </Typography>
+          <Typography
+            id="logout-modal-description"
+            textColor="text.tertiary"
+            mb={3}
+          >
+            Are you sure you want to logout? You will be redirected to the login page.
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+            <Button 
+              variant="plain" 
+              color="neutral" 
+              onClick={handleLogoutCancel}
+              disabled={isLoggingOut}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="solid" 
+              color="danger" 
+              onClick={handleLogoutConfirm}
+              loading={isLoggingOut}
+              disabled={isLoggingOut}
+            >
+              {isLoggingOut ? 'Logging out...' : 'Yes, Logout'}
+            </Button>
+          </Box>
+        </ModalDialog>
+      </Modal>
     </nav>
   );
 };
