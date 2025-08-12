@@ -4,7 +4,7 @@ import { Close as CloseIcon } from '@mui/icons-material';
 
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
 
-export interface Notification {
+export interface ToastNotification {
   id: string;
   type: NotificationType;
   title?: string;
@@ -13,36 +13,36 @@ export interface Notification {
   persistent?: boolean;
 }
 
-interface NotificationContextType {
-  notifications: Notification[];
-  addNotification: (notification: Omit<Notification, 'id'>) => void;
+interface ToastNotificationContextType {
+  notifications: ToastNotification[];
+  addNotification: (notification: Omit<ToastNotification, 'id'>) => void;
   removeNotification: (id: string) => void;
   clearAll: () => void;
   // Convenience methods
-  success: (message: string, title?: string, options?: Partial<Notification>) => void;
-  error: (message: string, title?: string, options?: Partial<Notification>) => void;
-  warning: (message: string, title?: string, options?: Partial<Notification>) => void;
-  info: (message: string, title?: string, options?: Partial<Notification>) => void;
+  success: (message: string, title?: string, options?: Partial<ToastNotification>) => void;
+  error: (message: string, title?: string, options?: Partial<ToastNotification>) => void;
+  warning: (message: string, title?: string, options?: Partial<ToastNotification>) => void;
+  info: (message: string, title?: string, options?: Partial<ToastNotification>) => void;
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
+const ToastNotificationContext = createContext<ToastNotificationContextType | undefined>(undefined);
 
-interface NotificationProviderProps {
+interface ToastNotificationProviderProps {
   children: React.ReactNode;
   maxNotifications?: number;
   defaultDuration?: number;
 }
 
-export const NotificationProvider: React.FC<NotificationProviderProps> = ({
+export const ToastNotificationProvider: React.FC<ToastNotificationProviderProps> = ({
   children,
   maxNotifications = 5,
   defaultDuration = 5000,
 }) => {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<ToastNotification[]>([]);
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id'>) => {
+  const addNotification = useCallback((notification: Omit<ToastNotification, 'id'>) => {
     const id = Math.random().toString(36).substr(2, 9);
-    const newNotification: Notification = {
+    const newNotification: ToastNotification = {
       ...notification,
       id,
       duration: notification.duration ?? defaultDuration,
@@ -71,19 +71,19 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   }, []);
 
   // Convenience methods
-  const success = useCallback((message: string, title?: string, options?: Partial<Notification>) => {
+  const success = useCallback((message: string, title?: string, options?: Partial<ToastNotification>) => {
     addNotification({ ...options, type: 'success', message, title });
   }, [addNotification]);
 
-  const error = useCallback((message: string, title?: string, options?: Partial<Notification>) => {
+  const error = useCallback((message: string, title?: string, options?: Partial<ToastNotification>) => {
     addNotification({ ...options, type: 'error', message, title, persistent: true });
   }, [addNotification]);
 
-  const warning = useCallback((message: string, title?: string, options?: Partial<Notification>) => {
+  const warning = useCallback((message: string, title?: string, options?: Partial<ToastNotification>) => {
     addNotification({ ...options, type: 'warning', message, title });
   }, [addNotification]);
 
-  const info = useCallback((message: string, title?: string, options?: Partial<Notification>) => {
+  const info = useCallback((message: string, title?: string, options?: Partial<ToastNotification>) => {
     addNotification({ ...options, type: 'info', message, title });
   }, [addNotification]);
 
@@ -99,15 +99,15 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   };
 
   return (
-    <NotificationContext.Provider value={value}>
+    <ToastNotificationContext.Provider value={value}>
       {children}
-      <NotificationContainer />
-    </NotificationContext.Provider>
+      <ToastNotificationContainer />
+    </ToastNotificationContext.Provider>
   );
 };
 
-const NotificationContainer: React.FC = () => {
-  const context = useContext(NotificationContext);
+const ToastNotificationContainer: React.FC = () => {
+  const context = useContext(ToastNotificationContext);
   if (!context) return null;
 
   const { notifications, removeNotification } = context;
@@ -158,10 +158,10 @@ const NotificationContainer: React.FC = () => {
   );
 };
 
-export const useNotifications = (): NotificationContextType => {
-  const context = useContext(NotificationContext);
+export const useNotifications = (): ToastNotificationContextType => {
+  const context = useContext(ToastNotificationContext);
   if (context === undefined) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
+    throw new Error('useNotifications must be used within a ToastNotificationProvider');
   }
   return context;
 };

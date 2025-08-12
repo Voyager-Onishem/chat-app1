@@ -37,7 +37,7 @@ export const fallbackAnnouncements = [
     title: 'Welcome to the Alumni Network',
     content: 'Connect with fellow alumni and explore opportunities',
     created_at: new Date().toISOString(),
-    author_id: 'system',
+    user_id: 'system',
   }
 ];
 

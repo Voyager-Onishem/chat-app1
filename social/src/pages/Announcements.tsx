@@ -9,6 +9,7 @@ interface Announcement {
   title: string;
   content: string;
   created_at: string;
+  user_id: string;
   author: {
     full_name: string;
     profile_picture_url?: string;
@@ -56,29 +57,35 @@ export const Announcements = () => {
         setUserRole(profile.role);
       }
 
-      // Fetch announcements with author information in a single query
-      const { data: announcementsData, error } = await supabase
+      // Fetch announcements first
+      const { data: announcementsData, error: announcementsError } = await supabase
         .from('announcements')
-        .select(`
-          *,
-          author:profiles!announcements_user_id_fkey (
-            full_name,
-            profile_picture_url,
-            role
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        setError(error.message);
+      if (announcementsError) {
+        setError(announcementsError.message);
         setLoading(false);
         return;
       }
 
+      if (!announcementsData || announcementsData.length === 0) {
+        setAnnouncements([]);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch profiles for authors
+      const userIds = announcementsData.map((a: any) => a.user_id);
+      const { data: profilesData } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, profile_picture_url, role')
+        .in('user_id', userIds);
+
       // Map announcements and handle missing profiles
-      const announcementsWithAuthors = announcementsData?.map(announcement => ({
+      const announcementsWithAuthors = announcementsData.map((announcement: any) => ({
         ...announcement,
-        author: announcement.author || {
+        author: profilesData?.find((p: any) => p.user_id === announcement.user_id) || {
           full_name: 'Unknown User',
           profile_picture_url: null,
           role: 'unknown'
@@ -101,7 +108,7 @@ export const Announcements = () => {
       const { error } = await supabase
         .from('announcements')
         .insert({
-          user_id: currentUser.id,
+          author_id: currentUser.id, // Changed from user_id to author_id
           title: formData.title,
           content: formData.content
         });
@@ -112,30 +119,34 @@ export const Announcements = () => {
       setShowCreateModal(false);
       reset();
 
-      // Refresh announcements with author information
+      // Refresh announcements
       const { data: announcementsData } = await supabase
         .from('announcements')
-        .select(`
-          *,
-          author:profiles!announcements_user_id_fkey (
-            full_name,
-            profile_picture_url,
-            role
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      // Map announcements and handle missing profiles
-      const announcementsWithAuthors = announcementsData?.map(announcement => ({
-        ...announcement,
-        author: announcement.author || {
-          full_name: 'Unknown User',
-          profile_picture_url: null,
-          role: 'unknown'
-        }
-      })) || [];
+      if (announcementsData && announcementsData.length > 0) {
+        // Fetch profiles for authors
+        const userIds = announcementsData.map((a: any) => a.user_id);
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, full_name, profile_picture_url, role')
+          .in('user_id', userIds);
 
-      setAnnouncements(announcementsWithAuthors);
+        // Map announcements and handle missing profiles
+        const announcementsWithAuthors = announcementsData.map((announcement: any) => ({
+          ...announcement,
+          author: profilesData?.find((p: any) => p.user_id === announcement.user_id) || {
+            full_name: 'Unknown User',
+            profile_picture_url: null,
+            role: 'unknown'
+          }
+        }));
+
+        setAnnouncements(announcementsWithAuthors);
+      } else {
+        setAnnouncements([]);
+      }
     } catch (err: any) {
       setError(err.message);
     }
@@ -145,17 +156,24 @@ export const Announcements = () => {
     if (!confirm('Are you sure you want to delete this announcement?')) return;
 
     try {
-      const { error } = await supabase
+      let query = supabase
         .from('announcements')
         .delete()
         .eq('id', announcementId);
+
+      // Only add user_id filter if not admin (admins can delete any announcement)
+      if (userRole !== 'admin') {
+        query = query.eq('user_id', currentUser.id);
+      }
+
+      const { error } = await query;
 
       if (error) throw error;
 
       setAnnouncements(prev => prev.filter(ann => ann.id !== announcementId));
       setSuccess('Announcement deleted successfully!');
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to delete announcement. You may not have permission.');
     }
   };
 
@@ -190,17 +208,20 @@ export const Announcements = () => {
             <Card key={announcement.id} sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                 <Avatar
+                  src={announcement.author?.profile_picture_url}
                   sx={{ width: 40, height: 40, bgcolor: 'primary.500' }}
                 >
-                  A
+                  {announcement.author?.full_name?.charAt(0).toUpperCase() || 'A'}
                 </Avatar>
                 <Box sx={{ flex: 1 }}>
-                  <Typography level="title-md">Admin</Typography>
+                  <Typography level="title-md">
+                    {announcement.author?.full_name || 'Unknown User'}
+                  </Typography>
                   <Typography level="body-sm" color="neutral">
-                    Administrator • {new Date(announcement.created_at).toLocaleDateString()}
+                    {announcement.author?.role || 'User'} • {new Date(announcement.created_at).toLocaleDateString()}
                   </Typography>
                 </Box>
-                {userRole === 'admin' && (
+                {(userRole === 'admin' || announcement.user_id === currentUser?.id) && (
                   <Button
                     size="sm"
                     color="danger"

@@ -26,6 +26,7 @@ export interface Connection {
   addressee_id: string;
   status: 'pending' | 'accepted' | 'blocked';
   created_at: string;
+  updated_at: string;
   requester?: UserProfile;
   addressee?: UserProfile;
 }

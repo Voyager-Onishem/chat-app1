@@ -130,11 +130,12 @@ export const connectionService = {
     return data;
   },
 
-  async respondToConnection(connectionId: string, status: 'accepted' | 'blocked'): Promise<Connection> {
+  async respondToConnection(requesterId: string, addresseeId: string, status: 'accepted' | 'blocked'): Promise<Connection> {
     const { data, error } = await supabase
       .from('connections')
       .update({ status })
-      .eq('id', connectionId)
+      .eq('requester_id', requesterId)
+      .eq('addressee_id', addresseeId)
       .select()
       .single();
 
@@ -246,30 +247,54 @@ export const eventService = {
  */
 export const announcementService = {
   async getAnnouncements(): Promise<Announcement[]> {
-    const { data, error } = await supabase
+    // First get announcements
+    const { data: announcementsData, error: announcementsError } = await supabase
       .from('announcements')
-      .select(`
-        *,
-        author:profiles!announcements_author_id_fkey(*)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
-    return data || [];
+    if (announcementsError) throw announcementsError;
+
+    if (!announcementsData || announcementsData.length === 0) {
+      return [];
+    }
+
+    // Get user IDs to fetch profiles
+    const userIds = announcementsData.map((a: any) => a.author_id);
+    const { data: profilesData, error: profilesError } = await supabase
+      .from('profiles')
+      .select('*')
+      .in('user_id', userIds);
+
+    if (profilesError) throw profilesError;
+
+    // Combine data
+    return announcementsData.map((announcement: any) => ({
+      ...announcement,
+      author: profilesData?.find((p: any) => p.user_id === announcement.author_id) || undefined
+    }));
   },
 
   async createAnnouncement(announcementData: Omit<Announcement, 'id' | 'created_at'>): Promise<Announcement> {
     const { data, error } = await supabase
       .from('announcements')
       .insert(announcementData)
-      .select(`
-        *,
-        author:profiles!announcements_author_id_fkey(*)
-      `)
+      .select('*')
       .single();
 
     if (error) throw error;
-    return data;
+    
+    // Fetch the author profile separately
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('user_id', data.author_id)
+      .single();
+    
+    return {
+      ...data,
+      author: profileData || undefined
+    };
   },
 
   async deleteAnnouncement(announcementId: string, userId: string): Promise<void> {
@@ -277,7 +302,7 @@ export const announcementService = {
       .from('announcements')
       .delete()
       .eq('id', announcementId)
-      .eq('author_id', userId);
+      .eq('user_id', userId);
 
     if (error) throw error;
   },

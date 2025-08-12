@@ -113,7 +113,7 @@ const MessagesImproved: React.FC = () => {
         .from('messages')
         .select(`
           *,
-          profiles!inner(
+          sender:profiles!messages_sender_id_fkey(
             full_name,
             profile_picture_url
           )

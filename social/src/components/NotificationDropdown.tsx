@@ -1,3 +1,4 @@
+import { useDatabaseNotifications } from '../context/DatabaseNotificationContext';
 import { useNotifications } from '../context/NotificationContext';
 import { useState } from 'react';
 import {
@@ -34,7 +35,14 @@ const formatTimeAgo = (timestamp: string) => {
 };
 
 export const NotificationDropdown = () => {
-  const { notifications, unreadCount, markAsRead, markAllAsRead, handleConnectionAction } = useNotifications();
+  const { 
+    notifications, 
+    unreadCount, 
+    markAsRead, 
+    markAllAsRead, 
+    handleConnectionAction: dbHandleConnectionAction
+  } = useDatabaseNotifications();
+  const { error: showError } = useNotifications(); // For toast notifications
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [processingAction, setProcessingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +64,7 @@ export const NotificationDropdown = () => {
       setError(null);
       setProcessingAction(notificationId);
 
-      await handleConnectionAction(notificationId, action);
+      await dbHandleConnectionAction(notificationId, action);
       
       // Show success message
       console.log(`Connection ${action}ed successfully`);
@@ -75,7 +83,7 @@ export const NotificationDropdown = () => {
       case 'connection_accepted':
         return <CheckCircleRounded color="success" />;
       case 'connection_rejected':
-        return <CancelRounded color="danger" />;
+        return <CancelRounded color="error" />;
       case 'message':
         return <MessageRounded color="info" />;
       case 'announcement':

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabase-client';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../context/AuthContext';
 
 interface Notification {
   id: string;
@@ -112,27 +112,28 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         return;
       }
 
-      const { connection_id, requester_id, recipient_id } = notification.data;
+      const { requester_id, addressee_id } = notification.data;
 
-      // Update connection status
+      // Update connection status using composite key
       const { error: connectionError } = await supabase
         .from('connections')
         .update({ 
-          status: action === 'accept' ? 'accepted' : 'rejected',
+          status: action === 'accept' ? 'accepted' : 'blocked',
           updated_at: new Date().toISOString()
         })
-        .eq('id', connection_id);
+        .eq('requester_id', requester_id)
+        .eq('addressee_id', addressee_id);
 
       if (connectionError) {
         console.error('Error updating connection:', connectionError);
         throw connectionError;
       }
 
-      // Get recipient profile for notification
-      const { data: recipientProfile } = await supabase
+      // Get requester profile for notification
+      const { data: requesterProfile } = await supabase
         .from('profiles')
         .select('full_name')
-        .eq('user_id', recipient_id)
+        .eq('user_id', requester_id)
         .single();
 
       // Create notification for the requester
@@ -143,13 +144,12 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
           type: action === 'accept' ? 'connection_accepted' : 'connection_rejected',
           title: action === 'accept' ? 'Connection Accepted' : 'Connection Rejected',
           message: action === 'accept' 
-            ? `${recipientProfile?.full_name || 'Someone'} accepted your connection request`
-            : `${recipientProfile?.full_name || 'Someone'} rejected your connection request`,
+            ? `${user.user_metadata?.full_name || 'Someone'} accepted your connection request`
+            : `${user.user_metadata?.full_name || 'Someone'} rejected your connection request`,
           data: {
-            connection_id,
             requester_id,
-            recipient_id,
-            recipient_name: recipientProfile?.full_name || 'Unknown User'
+            addressee_id,
+            action_by: user.id
           },
           read: false,
         });
