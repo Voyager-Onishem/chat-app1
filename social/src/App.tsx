@@ -1,6 +1,7 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import { NotificationProvider } from "./context/NotificationContext";
+import { ToastNotificationProvider } from "./context/NotificationContext";
+import { DatabaseNotificationProvider } from "./context/DatabaseNotificationContext";
 import Layout from "./components/Layout";
 import { Home } from "./pages/Home.tsx";
 import { Login } from "./pages/Login";
@@ -142,11 +143,13 @@ function App() {
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
           <ErrorBoundary>
-            <NotificationProvider>
-              <ErrorBoundary>
-                <AppRoutes />
-              </ErrorBoundary>
-            </NotificationProvider>
+            <ToastNotificationProvider>
+              <DatabaseNotificationProvider>
+                <ErrorBoundary>
+                  <AppRoutes />
+                </ErrorBoundary>
+              </DatabaseNotificationProvider>
+            </ToastNotificationProvider>
           </ErrorBoundary>
         </AuthProvider>
       </BrowserRouter>

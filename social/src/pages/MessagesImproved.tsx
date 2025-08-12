@@ -170,11 +170,11 @@ const MessagesImproved: React.FC = () => {
     selectedChat ? `conversation_id=eq.${selectedChat.id}` : undefined,
     {
       enabled: !!selectedChat,
-      onInsert: (payload) => {
+      onInsert: (payload: any) => {
         console.log('New message received:', payload);
         refetchMessages();
       },
-      onUpdate: (payload) => {
+      onUpdate: (payload: any) => {
         console.log('Message updated:', payload);
         refetchMessages();
       },

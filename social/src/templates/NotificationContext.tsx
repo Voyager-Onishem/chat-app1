@@ -190,7 +190,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
           },
-          (payload) => {
+          (payload: any) => {
             setNotifications(prev => [payload.new as Notification, ...prev]);
           }
         )
@@ -202,7 +202,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
           },
-          (payload) => {
+          (payload: any) => {
             setNotifications(prev => 
               prev.map(notif => 
                 notif.id === payload.new.id ? payload.new as Notification : notif

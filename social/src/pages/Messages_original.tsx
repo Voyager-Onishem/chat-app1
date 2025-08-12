@@ -238,7 +238,7 @@ export default function Messages() {
         schema: 'public',
         table: 'messages',
         filter: `conversation_id=eq.${selectedChat.id}`,
-      }, (payload) => {
+      }, (payload: any) => {
         const newMessage = payload.new;
         if (newMessage.sender_id !== user?.id) {
           // Add the new message to the chat

@@ -100,7 +100,7 @@ export const NotificationDropdown = () => {
       case 'connection_accepted':
         return 'success';
       case 'connection_rejected':
-        return 'danger';
+        return 'error';
       case 'message':
         return 'info';
       case 'announcement':
@@ -261,7 +261,7 @@ export const NotificationDropdown = () => {
 
                     {notification.type === 'connection_rejected' && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mt: 0.5 }}>
-                        <CancelRounded color="danger" fontSize="small" />
+                        <CancelRounded color="error" fontSize="small" />
                         <Typography level="body-xs" color="danger">
                           Connection rejected
                         </Typography>

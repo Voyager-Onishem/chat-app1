@@ -30,6 +30,7 @@ import PersonRoundedIcon from '@mui/icons-material/PersonRounded';
 import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSettingsRounded';
 
 import ColorSchemeToggle from './ColorSchemeToggle';
+import { NotificationDropdown } from './NotificationDropdown';
 import { useAuth } from '../context/AuthContext';
 import { performCompleteLogout, clearAllStorage, clearAllCookies } from '../utils/auth-cleanup';
 
@@ -168,6 +169,7 @@ export default function Sidebar() {
           <BrightnessAutoRoundedIcon />
         </IconButton>
         <Typography level="title-lg">Alumni Network</Typography>
+        <NotificationDropdown />
         <ColorSchemeToggle sx={{ ml: 'auto' }} />
       </Box>
       <Input 
