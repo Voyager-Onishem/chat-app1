@@ -96,6 +96,7 @@ const MessagesImproved: React.FC = () => {
       fallbackData: mockConversations,
       retry: 2,
       timeout: 10000,
+      refetchOnWindowFocus: false, // Keep false for conversations due to real-time subscriptions
     }
   );
 
@@ -128,6 +129,7 @@ const MessagesImproved: React.FC = () => {
       enabled: !!selectedChat,
       retry: 2,
       timeout: 10000,
+      refetchOnWindowFocus: true, // Enable for messages to get updates on focus
     }
   );
 

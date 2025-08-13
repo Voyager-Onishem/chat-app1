@@ -15,8 +15,6 @@ import {
   Textarea,
   FormControl,
   FormLabel,
-  Select,
-  Option,
   Card,
   CardContent,
   Typography,
@@ -52,7 +50,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
     handleSubmit,
     formState: { errors },
     setError: setFieldError,
-    setValue,
+    // setValue,
     watch,
   } = useForm<ProfileFormData>({
     defaultValues: {

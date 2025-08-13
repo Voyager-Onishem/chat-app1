@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getConnectionStatus } from '../utils/connectionManager';
-import { Box, Chip, Tooltip } from '@mui/joy';
+import { Chip, Tooltip } from '@mui/joy';
 import { WifiRounded, WifiOffRounded, SignalCellularAltRounded } from '@mui/icons-material';
 
 interface ConnectionStatus {

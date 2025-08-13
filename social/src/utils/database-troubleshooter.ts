@@ -244,7 +244,7 @@ export const testRealtime = async (): Promise<DiagnosticResult> => {
         }, () => {
           // Event received (though we won't trigger any)
         })
-        .subscribe((status) => {
+        .subscribe((status: string) => {
           if (!resolved) {
             const duration = Date.now() - startTime;
             resolved = true;

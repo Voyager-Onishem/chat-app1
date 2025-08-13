@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Box, Button, Typography, Card, Stack, Chip, Alert } from '@mui/joy';
 import { supabase } from '../supabase-client';
 import { robustQueries } from '../utils/robust-query';

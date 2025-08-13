@@ -3,25 +3,7 @@ import { supabase } from '../supabase-client';
 import { Box, Typography, CircularProgress, Alert, Button, Card, Avatar, Input, Textarea, Modal, ModalDialog, ModalClose, Chip } from '@mui/joy';
 import { Add as AddIcon, LocationOn as LocationIcon, CalendarToday as CalendarIcon } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
-
-interface Event {
-  id: string;
-  title: string;
-  description: string;
-  location: string;
-  event_time: string;
-  created_at: string;
-  created_by_user_id: string;
-  created_by?: {
-    full_name: string;
-    profile_picture_url?: string;
-    role: string;
-  };
-  rsvps?: Array<{
-    user_id: string;
-    status: string;
-  }>;
-}
+import { Event, UserProfile, RSVP } from '../types';
 
 interface CreateEventForm {
   title: string;
@@ -89,21 +71,21 @@ export const Events = () => {
 
         if (eventsData && eventsData.length > 0) {
           // Fetch creator profiles
-          const creatorIds = [...new Set(eventsData.map(event => event.created_by_user_id))];
+          const creatorIds = [...new Set(eventsData.map((event: Event) => event.created_by_user_id))];
           const { data: creatorProfiles } = await supabase
             .from('profiles')
             .select('user_id, full_name, profile_picture_url, role')
             .in('user_id', creatorIds);
 
           // Fetch RSVPs for all events
-          const eventIds = eventsData.map(event => event.id);
+          const eventIds = eventsData.map((event: Event) => event.id);
           const { data: rsvpsData } = await supabase
             .from('event_rsvps')
             .select('*')
             .in('event_id', eventIds);
 
           // Fetch user profiles for RSVPs
-          const rsvpUserIds = [...new Set(rsvpsData?.map(rsvp => rsvp.user_id) || [])];
+          const rsvpUserIds = [...new Set(rsvpsData?.map((rsvp: RSVP) => rsvp.user_id) || [])];
           const { data: rsvpUserProfiles } = await supabase
             .from('profiles')
             .select('user_id, full_name, profile_picture_url')
@@ -111,18 +93,18 @@ export const Events = () => {
 
           // Create maps
           const creatorProfilesMap = new Map();
-          creatorProfiles?.forEach(profile => {
+          creatorProfiles?.forEach((profile: UserProfile) => {
             creatorProfilesMap.set(profile.user_id, profile);
           });
 
           const rsvpUserProfilesMap = new Map();
-          rsvpUserProfiles?.forEach(profile => {
+          rsvpUserProfiles?.forEach((profile: UserProfile) => {
             rsvpUserProfilesMap.set(profile.user_id, profile);
           });
 
           // Group RSVPs by event
           const rsvpsByEvent = new Map();
-          rsvpsData?.forEach(rsvp => {
+          rsvpsData?.forEach((rsvp: RSVP) => {
             if (!rsvpsByEvent.has(rsvp.event_id)) {
               rsvpsByEvent.set(rsvp.event_id, []);
             }
@@ -133,7 +115,7 @@ export const Events = () => {
           });
 
           // Add creator and RSVP info to events
-          const eventsWithDetails = eventsData.map(event => ({
+          const eventsWithDetails = eventsData.map((event: Event) => ({
             ...event,
             created_by: creatorProfilesMap.get(event.created_by_user_id),
             rsvps: rsvpsByEvent.get(event.id) || []
@@ -185,21 +167,21 @@ export const Events = () => {
 
       if (eventsData && eventsData.length > 0) {
         // Fetch creator profiles
-        const creatorIds = [...new Set(eventsData.map(event => event.created_by_user_id))];
+        const creatorIds = [...new Set(eventsData.map((event: Event) => event.created_by_user_id))];
         const { data: creatorProfiles } = await supabase
           .from('profiles')
           .select('user_id, full_name, profile_picture_url, role')
           .in('user_id', creatorIds);
 
         // Fetch RSVPs for all events
-        const eventIds = eventsData.map(event => event.id);
+        const eventIds = eventsData.map((event: Event) => event.id);
         const { data: rsvpsData } = await supabase
           .from('event_rsvps')
           .select('*')
           .in('event_id', eventIds);
 
         // Fetch user profiles for RSVPs
-        const rsvpUserIds = [...new Set(rsvpsData?.map(rsvp => rsvp.user_id) || [])];
+        const rsvpUserIds = [...new Set(rsvpsData?.map((rsvp: RSVP) => rsvp.user_id) || [])];
         const { data: rsvpUserProfiles } = await supabase
           .from('profiles')
           .select('user_id, full_name, profile_picture_url')
@@ -207,18 +189,18 @@ export const Events = () => {
 
         // Create maps
         const creatorProfilesMap = new Map();
-        creatorProfiles?.forEach(profile => {
+        creatorProfiles?.forEach((profile: UserProfile) => {
           creatorProfilesMap.set(profile.user_id, profile);
         });
 
         const rsvpUserProfilesMap = new Map();
-        rsvpUserProfiles?.forEach(profile => {
+        rsvpUserProfiles?.forEach((profile: UserProfile) => {
           rsvpUserProfilesMap.set(profile.user_id, profile);
         });
 
         // Group RSVPs by event
         const rsvpsByEvent = new Map();
-        rsvpsData?.forEach(rsvp => {
+        rsvpsData?.forEach((rsvp: RSVP) => {
           if (!rsvpsByEvent.has(rsvp.event_id)) {
             rsvpsByEvent.set(rsvp.event_id, []);
           }
@@ -229,7 +211,7 @@ export const Events = () => {
         });
 
         // Add creator and RSVP info to events
-        const eventsWithDetails = eventsData.map(event => ({
+        const eventsWithDetails = eventsData.map((event: Event) => ({
           ...event,
           created_by: creatorProfilesMap.get(event.created_by_user_id),
           rsvps: rsvpsByEvent.get(event.id) || []
@@ -286,21 +268,21 @@ export const Events = () => {
 
       if (eventsData && eventsData.length > 0) {
         // Fetch creator profiles
-        const creatorIds = [...new Set(eventsData.map(event => event.created_by_user_id))];
+        const creatorIds = [...new Set(eventsData.map((event: Event) => event.created_by_user_id))];
         const { data: creatorProfiles } = await supabase
           .from('profiles')
           .select('user_id, full_name, profile_picture_url, role')
           .in('user_id', creatorIds);
 
         // Fetch RSVPs for all events
-        const eventIds = eventsData.map(event => event.id);
+        const eventIds = eventsData.map((event: Event) => event.id);
         const { data: rsvpsData } = await supabase
           .from('event_rsvps')
           .select('*')
           .in('event_id', eventIds);
 
         // Fetch user profiles for RSVPs
-        const rsvpUserIds = [...new Set(rsvpsData?.map(rsvp => rsvp.user_id) || [])];
+        const rsvpUserIds = [...new Set(rsvpsData?.map((rsvp: RSVP) => rsvp.user_id) || [])];
         const { data: rsvpUserProfiles } = await supabase
           .from('profiles')
           .select('user_id, full_name, profile_picture_url')
@@ -308,18 +290,18 @@ export const Events = () => {
 
         // Create maps
         const creatorProfilesMap = new Map();
-        creatorProfiles?.forEach(profile => {
+        creatorProfiles?.forEach((profile: UserProfile) => {
           creatorProfilesMap.set(profile.user_id, profile);
         });
 
         const rsvpUserProfilesMap = new Map();
-        rsvpUserProfiles?.forEach(profile => {
+        rsvpUserProfiles?.forEach((profile: UserProfile) => {
           rsvpUserProfilesMap.set(profile.user_id, profile);
         });
 
         // Group RSVPs by event
         const rsvpsByEvent = new Map();
-        rsvpsData?.forEach(rsvp => {
+        rsvpsData?.forEach((rsvp: RSVP) => {
           if (!rsvpsByEvent.has(rsvp.event_id)) {
             rsvpsByEvent.set(rsvp.event_id, []);
           }
@@ -330,7 +312,7 @@ export const Events = () => {
         });
 
         // Add creator and RSVP info to events
-        const eventsWithDetails = eventsData.map(event => ({
+        const eventsWithDetails = eventsData.map((event: Event) => ({
           ...event,
           created_by: creatorProfilesMap.get(event.created_by_user_id),
           rsvps: rsvpsByEvent.get(event.id) || []

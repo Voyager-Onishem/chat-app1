@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ToastNotificationProvider } from "./context/NotificationContext";
 import { DatabaseNotificationProvider } from "./context/DatabaseNotificationContext";
 import Layout from "./components/Layout";
+import ErrorBoundaryEnhanced from "./components/ErrorBoundaryEnhanced";
 import { Home } from "./pages/Home.tsx";
 import { Login } from "./pages/Login";
 import { AdminLogin } from "./pages/AdminLogin";
@@ -18,43 +19,36 @@ import { Jobs } from "./pages/Jobs";
 import { Events } from "./pages/Events";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import SystemDiagnostics from "./components/SystemDiagnostics";
-import ErrorBoundary from "./components/ErrorBoundary";
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  try {
-    const { user, loading } = useAuth();
-    
-    if (loading) {
-      return (
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '100vh',
-          fontSize: '18px'
-        }}>
-          Loading...
-        </div>
-      );
-    }
-    
-    if (!user) {
-      return <Navigate to="/login" replace />;
-    }
-    
-    return <>{children}</>;
-  } catch (error) {
-    console.warn('Auth context not available in ProtectedRoute, redirecting to login');
+  const { user, loading } = useAuth();
+  
+  if (loading) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        height: '100vh',
+        fontSize: '18px'
+      }}>
+        Loading...
+      </div>
+    );
+  }
+  
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
+  
+  return <>{children}</>;
 }
 
 // Public Route Component (redirects to home if already logged in)
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  try {
-    const { user, loading } = useAuth();
-  
+  const { user, loading } = useAuth();
+
   if (loading) {
     return (
       <div style={{ 
@@ -74,10 +68,6 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   }
   
   return <>{children}</>;
-  } catch (error) {
-    console.warn('Auth context not available in PublicRoute, allowing public access');
-    return <>{children}</>;
-  }
 }
 
 function AppRoutes() {
@@ -139,21 +129,21 @@ function AppRoutes() {
 
 function App() {
   return (
-    <ErrorBoundary>
+    <ErrorBoundaryEnhanced>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AuthProvider>
-          <ErrorBoundary>
+          <ErrorBoundaryEnhanced>
             <ToastNotificationProvider>
               <DatabaseNotificationProvider>
-                <ErrorBoundary>
+                <ErrorBoundaryEnhanced>
                   <AppRoutes />
-                </ErrorBoundary>
+                </ErrorBoundaryEnhanced>
               </DatabaseNotificationProvider>
             </ToastNotificationProvider>
-          </ErrorBoundary>
+          </ErrorBoundaryEnhanced>
         </AuthProvider>
       </BrowserRouter>
-    </ErrorBoundary>
+    </ErrorBoundaryEnhanced>
   );
 }
 

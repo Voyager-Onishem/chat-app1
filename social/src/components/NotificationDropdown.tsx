@@ -34,6 +34,9 @@ const formatTimeAgo = (timestamp: string) => {
   return `${Math.floor(diffInSeconds / 86400)}d ago`;
 };
 
+/**
+ * Notification dropdown showing database-backed notifications with interactive actions.
+ */
 export const NotificationDropdown = () => {
   const { 
     notifications, 
@@ -42,7 +45,6 @@ export const NotificationDropdown = () => {
     markAllAsRead, 
     handleConnectionAction: dbHandleConnectionAction
   } = useDatabaseNotifications();
-  const { error: showError } = useNotifications(); // For toast notifications
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [processingAction, setProcessingAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -90,23 +92,6 @@ export const NotificationDropdown = () => {
         return <AnnouncementRounded color="warning" />;
       default:
         return <NotificationsRounded />;
-    }
-  };
-
-  const getNotificationColor = (type: string) => {
-    switch (type) {
-      case 'connection_request':
-        return 'primary';
-      case 'connection_accepted':
-        return 'success';
-      case 'connection_rejected':
-        return 'error';
-      case 'message':
-        return 'info';
-      case 'announcement':
-        return 'warning';
-      default:
-        return 'neutral';
     }
   };
 

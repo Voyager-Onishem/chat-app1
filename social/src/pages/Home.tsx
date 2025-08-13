@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useQuery } from '../hooks/useQuery';
 import { supabase } from '../supabase-client';
 import { Box, Typography, Button, Card, Grid, Avatar, Stack, Divider } from '@mui/joy';
 import { PeopleRounded, WorkRounded, EventRounded, AnnouncementRounded, TrendingUpRounded } from '@mui/icons-material';
@@ -22,10 +23,28 @@ interface Connection {
   addressee_id: string;
   status: string;
   created_at: string;
-  profiles: {
-    full_name: string;
-    profile_picture_url?: string;
-  };
+}
+
+interface Profile {
+  user_id: string;
+  full_name: string;
+  profile_picture_url?: string;
+  role: string;
+}
+
+interface Job {
+  title: string;
+  created_at: string;
+}
+
+interface Event {
+  title: string;
+  created_at: string;
+}
+
+interface Announcement {
+  title: string;
+  created_at: string;
 }
 
 export const Home = () => {
@@ -41,13 +60,24 @@ export const Home = () => {
 
   useEffect(() => {
     if (user) {
-      fetchDashboardData();
+      // Add a small delay to ensure user is fully loaded
+      const timer = setTimeout(() => {
+        fetchDashboardData();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
   }, [user]);
 
   const fetchDashboardData = async () => {
+    if (!user?.id) {
+      console.warn('No user ID available, skipping dashboard data fetch');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      console.log('Starting to fetch dashboard data...');
+      console.log('Starting to fetch dashboard data for user:', user.id);
       
       // Check if Supabase is properly configured
       const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -141,37 +171,42 @@ export const Home = () => {
 
       // Fetch profiles for the connections
       if (recentConnections && recentConnections.length > 0) {
-        const userIds = recentConnections.map(conn => conn.requester_id);
+        const userIds = (recentConnections as Connection[])
+          .map((conn: Connection) => conn.requester_id)
+          .filter((id: string) => id && id !== 'undefined'); // Filter out undefined values
+        
         console.log('Fetching profiles for user IDs:', userIds);
         
-        const { data: profiles, error: profilesError } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, profile_picture_url')
-          .in('user_id', userIds);
+        if (userIds.length > 0) {
+          const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('user_id, full_name, profile_picture_url, role')
+            .in('user_id', userIds);
 
-        if (profilesError) {
-          console.error('Error fetching profiles:', profilesError);
-        } else {
-          console.log('Profiles fetched:', profiles);
-        }
-
-        const profilesMap = new Map(profiles?.map(p => [p.user_id, p]) || []);
-
-        recentConnections.forEach(conn => {
-          const profile = profilesMap.get(conn.requester_id);
-          if (profile?.full_name) {
-            activities.push({
-              type: 'connection',
-              title: 'New Connection',
-              description: `${profile.full_name} joined the network`,
-              timestamp: conn.created_at,
-              user: {
-                full_name: profile.full_name,
-                profile_picture_url: profile.profile_picture_url,
-              },
-            });
+          if (profilesError) {
+            console.error('Error fetching profiles:', profilesError);
+          } else {
+            console.log('Profiles fetched:', profiles);
           }
-        });
+
+          const profilesMap = new Map((profiles as Profile[])?.map((p: Profile) => [p.user_id, p]) || []);
+
+          (recentConnections as Connection[]).forEach((conn: Connection) => {
+            const profile = profilesMap.get(conn.requester_id) as Profile;
+            if (profile?.full_name) {
+              activities.push({
+                type: 'connection',
+                title: 'New Connection',
+                description: `${profile.full_name} joined the network`,
+                timestamp: conn.created_at,
+                user: {
+                  full_name: profile.full_name,
+                  profile_picture_url: profile.profile_picture_url,
+                },
+              });
+            }
+          });
+        }
       }
 
       // Recent jobs
@@ -188,7 +223,7 @@ export const Home = () => {
         console.log('Recent jobs fetched:', recentJobs);
       }
 
-      recentJobs?.forEach(job => {
+      (recentJobs as Job[])?.forEach((job: Job) => {
         activities.push({
           type: 'job',
           title: 'New Job Posted',
@@ -211,7 +246,7 @@ export const Home = () => {
         console.log('Recent events fetched:', recentEvents);
       }
 
-      recentEvents?.forEach(event => {
+      (recentEvents as Event[])?.forEach((event: Event) => {
         activities.push({
           type: 'event',
           title: 'New Event',
@@ -234,7 +269,7 @@ export const Home = () => {
         console.log('Recent announcements fetched:', recentAnnouncements);
       }
 
-      recentAnnouncements?.forEach(announcement => {
+      (recentAnnouncements as Announcement[])?.forEach((announcement: Announcement) => {
         activities.push({
           type: 'announcement',
           title: 'New Announcement',

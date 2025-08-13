@@ -65,7 +65,10 @@ function Toggler(props: {
   );
 }
 
-export default function Sidebar() {
+/**
+ * Main app sidebar navigation.
+ */
+export default function Sidebar(): React.ReactElement {
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -73,19 +76,24 @@ export default function Sidebar() {
   let user = null;
   let profile = null;
   let signOut = null;
+  let authError = false;
   
   try {
     const authContext = useAuth();
     user = authContext.user;
     profile = authContext.profile;
     signOut = authContext.signOut;
-  } catch (error) {
+  } catch {
     console.warn('Auth context not available in Sidebar');
-    // Redirect to login if auth context is not available
-    React.useEffect(() => {
-      navigate('/login');
-    }, [navigate]);
+    authError = true;
   }
+  
+  // Handle auth errors consistently
+  React.useEffect(() => {
+    if (authError) {
+      navigate('/login');
+    }
+  }, [navigate, authError]);
   
   const [searchQuery, setSearchQuery] = React.useState('');
 

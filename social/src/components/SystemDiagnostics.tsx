@@ -16,7 +16,6 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Grid,
   Paper,
   Divider
 } from '@mui/material';
@@ -182,8 +181,8 @@ const SystemDiagnostics: React.FC = () => {
 
       {/* Results Summary */}
       {diagnosticResults && (
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          <Grid item xs={12} sm={6} md={3}>
+        <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap' }}>
+          <Box sx={{ flex: '1 1 200px', minWidth: 200 }}>
             <Paper sx={{ p: 2, textAlign: 'center' }}>
               <Typography variant="h6" color="primary">
                 {diagnosticResults.summary.total}
@@ -192,8 +191,8 @@ const SystemDiagnostics: React.FC = () => {
                 Total Tests
               </Typography>
             </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          </Box>
+          <Box sx={{ flex: '1 1 200px', minWidth: 200 }}>
             <Paper sx={{ p: 2, textAlign: 'center' }}>
               <Typography variant="h6" color="success.main">
                 {diagnosticResults.summary.passed}
@@ -202,8 +201,8 @@ const SystemDiagnostics: React.FC = () => {
                 Passed
               </Typography>
             </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          </Box>
+          <Box sx={{ flex: '1 1 200px', minWidth: 200 }}>
             <Paper sx={{ p: 2, textAlign: 'center' }}>
               <Typography variant="h6" color="warning.main">
                 {diagnosticResults.summary.warnings}
@@ -212,8 +211,8 @@ const SystemDiagnostics: React.FC = () => {
                 Warnings
               </Typography>
             </Paper>
-          </Grid>
-          <Grid item xs={12} sm={6} md={3}>
+          </Box>
+          <Box sx={{ flex: '1 1 200px', minWidth: 200 }}>
             <Paper sx={{ p: 2, textAlign: 'center' }}>
               <Typography variant="h6" color="error.main">
                 {diagnosticResults.summary.failed}
@@ -222,8 +221,8 @@ const SystemDiagnostics: React.FC = () => {
                 Failed
               </Typography>
             </Paper>
-          </Grid>
-        </Grid>
+          </Box>
+        </Box>
       )}
 
       {/* Diagnostic Results */}

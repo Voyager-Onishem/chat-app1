@@ -1,6 +1,15 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase-client';
 import { Box, Typography, CircularProgress, Alert, Button, Card, Avatar, Chip } from '@mui/joy';
+import { UserProfile } from '../types';
+
+interface DbConnection {
+  id: string;
+  requester_id: string;
+  addressee_id: string;
+  status: 'pending' | 'accepted' | 'blocked';
+  created_at: string;
+}
 
 interface Connection {
   id: string;
@@ -58,7 +67,7 @@ export const Connections = () => {
 
       // Fetch profiles for all users involved in connections
       const userIds = new Set<string>();
-      connectionsData?.forEach(conn => {
+      connectionsData?.forEach((conn: any) => {
         userIds.add(conn.requester_id);
         userIds.add(conn.addressee_id);
       });
@@ -70,12 +79,12 @@ export const Connections = () => {
 
       // Create a map of user profiles
       const profilesMap = new Map();
-      profilesData?.forEach(profile => {
+      profilesData?.forEach((profile: UserProfile) => {
         profilesMap.set(profile.user_id, profile);
       });
 
       // Combine connections with profile data
-      const enrichedConnections = connectionsData?.map(conn => ({
+      const enrichedConnections = connectionsData?.map((conn: any) => ({
         ...conn,
         requester: profilesMap.get(conn.requester_id),
         addressee: profilesMap.get(conn.addressee_id)
@@ -179,7 +188,7 @@ export const Connections = () => {
                     <Button
                       size="sm"
                       color="success"
-                      fullWidth={{ xs: true, sm: false }}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
                       onClick={() => handleConnectionAction(`${conn.requester.id}-${conn.addressee.id}`, 'accept')}
                     >
                       Accept
@@ -188,7 +197,7 @@ export const Connections = () => {
                       size="sm"
                       color="danger"
                       variant="outlined"
-                      fullWidth={{ xs: true, sm: false }}
+                      sx={{ width: { xs: '100%', sm: 'auto' } }}
                       onClick={() => handleConnectionAction(`${conn.requester.id}-${conn.addressee.id}`, 'reject')}
                     >
                       Decline

@@ -6,6 +6,9 @@ interface LoadingSpinnerProps {
   text?: string;
 }
 
+/**
+ * Simple loading spinner with optional label.
+ */
 export const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ 
   size = 'md', 
   text = 'Loading...' 
@@ -34,6 +37,9 @@ interface LoadingCardProps {
   text?: string;
 }
 
+/**
+ * Card-shaped loading placeholder with centered spinner and text.
+ */
 export const LoadingCard: React.FC<LoadingCardProps> = ({ 
   height = 200, 
   text = 'Loading...' 
@@ -63,6 +69,9 @@ interface SkeletonProps {
   variant?: 'text' | 'circular' | 'rectangular';
 }
 
+/**
+ * Lightweight skeleton block for content placeholders.
+ */
 export const Skeleton: React.FC<SkeletonProps> = ({
   width = '100%',
   height = 20,
@@ -108,6 +117,9 @@ interface ProfileCardSkeletonProps {
   count?: number;
 }
 
+/**
+ * Skeleton list for profile cards.
+ */
 export const ProfileCardSkeleton: React.FC<ProfileCardSkeletonProps> = ({ count = 1 }) => {
   return (
     <>

@@ -240,30 +240,9 @@ export const robustQueries = {
     );
   },
 
-  /**
-   * Get connections count
-   */
-  async getConnectionsCount(options: QueryOptions = {}) {
-    return robustQuery(
-      supabase.from('connections').select('*', { count: 'exact', head: true }),
-      { ...options, fallbackData: 0 }
-    );
-  },
 
-  /**
-   * Get recent connections
-   */
-  async getRecentConnections(limit: number = 3, options: QueryOptions = {}) {
-    return robustQuery(
-      supabase
-        .from('connections')
-        .select('requester_id, addressee_id, status, created_at')
-        .eq('status', 'accepted')
-        .order('created_at', { ascending: false })
-        .limit(limit),
-      { ...options, fallbackData: [] }
-    );
-  },
+
+
 
   /**
    * Test connection with simple query

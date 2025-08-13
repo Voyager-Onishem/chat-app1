@@ -52,10 +52,14 @@ export interface Event {
   created_at: string;
   created_by_user_id: string;
   created_by?: UserProfile;
-  rsvps?: Array<{
-    user_id: string;
-    status: 'attending' | 'interested' | 'not_attending';
-  }>;
+  rsvps?: RSVP[];
+}
+
+export interface RSVP {
+  user_id: string;
+  status: 'attending' | 'interested' | 'not_attending';
+  event_id?: string;
+  user?: UserProfile;
 }
 
 export interface Announcement {
@@ -69,7 +73,13 @@ export interface Announcement {
 
 export interface ConversationParticipant {
   user_id: string;
-  profiles: UserProfile;
+  conversation_id: string;
+  profiles?: UserProfile;
+}
+
+export interface UserConversation {
+  conversation_id: string;
+  user_id: string;
 }
 
 export interface Conversation {
@@ -87,7 +97,7 @@ export interface Message {
   sender?: UserProfile;
 }
 
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T | null;
   error: Error | null;
   fromFallback: boolean;
@@ -144,4 +154,34 @@ export interface CreateEventFormData {
 export interface CreateAnnouncementFormData {
   title: string;
   content: string;
+}
+
+// Notifications
+export type NotificationType = 'success' | 'error' | 'warning' | 'info';
+
+export interface ToastNotification {
+  id: string;
+  type: NotificationType;
+  title?: string;
+  message: string;
+  duration?: number;
+  persistent?: boolean;
+}
+
+export type DbNotificationType =
+  | 'connection_request'
+  | 'connection_accepted'
+  | 'connection_rejected'
+  | 'message'
+  | 'announcement';
+
+export interface DatabaseNotification {
+  id: string;
+  user_id: string;
+  type: DbNotificationType;
+  title: string;
+  message: string;
+  data?: Record<string, unknown>;
+  read: boolean;
+  created_at: string;
 }

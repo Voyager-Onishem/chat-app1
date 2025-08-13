@@ -1,17 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import { Alert, IconButton, Box, Snackbar } from '@mui/joy';
+import { IconButton, Box, Snackbar } from '@mui/joy';
 import { Close as CloseIcon } from '@mui/icons-material';
-
-export type NotificationType = 'success' | 'error' | 'warning' | 'info';
-
-export interface ToastNotification {
-  id: string;
-  type: NotificationType;
-  title?: string;
-  message: string;
-  duration?: number;
-  persistent?: boolean;
-}
+import type { ToastNotification } from '../types';
 
 interface ToastNotificationContextType {
   notifications: ToastNotification[];
@@ -33,6 +23,9 @@ interface ToastNotificationProviderProps {
   defaultDuration?: number;
 }
 
+/**
+ * Global toast notification provider using MUI Joy Snackbar.
+ */
 export const ToastNotificationProvider: React.FC<ToastNotificationProviderProps> = ({
   children,
   maxNotifications = 5,

@@ -5,8 +5,9 @@ import { useNotifications } from '../context/NotificationContext';
 import { supabase } from '../supabase-client';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { getErrorMessage } from '../utils/errorHandling';
+import { debugMessagesSystem, createTestConversation } from '../utils/messages-debug';
 import type { ChatProps, MessageProps } from '../types/messages';
-import type { Conversation, ConversationParticipant } from '../types';
+import type { Conversation, ConversationParticipant, UserConversation, UserProfile } from '../types';
 import {
   Box,
   Typography,
@@ -40,6 +41,109 @@ const MessagesImproved: React.FC = () => {
   const { error: notifyError, success } = useNotifications();
   const [selectedChat, setSelectedChat] = useState<ChatProps | null>(null);
 
+  // Memoize the query function to prevent infinite re-renders
+  const fetchConversations = useCallback(async () => {
+      if (!user) throw new Error('User not authenticated');
+      
+      console.log('Fetching conversations for user:', user.id);
+
+      // First get conversations where user is a participant
+      const { data: userConversations, error: convError } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', user.id);
+
+      if (convError) {
+        console.error('User conversations error:', convError);
+        throw convError;
+      }
+      
+      if (!userConversations || userConversations.length === 0) {
+        console.log('No conversations found for user');
+        return [];
+      }
+
+      const conversationIds = userConversations.map((uc: UserConversation) => uc.conversation_id);
+      console.log('Found conversation IDs:', conversationIds);
+
+      // Get conversations details
+      const { data: conversationsData, error: conversationsError } = await supabase
+        .from('conversations')
+        .select('id, created_at')
+        .in('id', conversationIds);
+
+      if (conversationsError) {
+        console.error('Conversations details error:', conversationsError);
+        throw conversationsError;
+      }
+
+      // Get all participants for these conversations
+      const { data: allParticipants, error: participantsError } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id, user_id')
+        .in('conversation_id', conversationIds);
+
+      if (participantsError) {
+        console.error('Participants error:', participantsError);
+        throw participantsError;
+      }
+
+      // Get profiles for all participants
+      const participantUserIds = [...new Set(allParticipants?.map((p: ConversationParticipant) => p.user_id) || [])];
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, profile_picture_url, role')
+        .in('user_id', participantUserIds);
+
+      if (profilesError) {
+        console.error('Profiles error:', profilesError);
+        throw profilesError;
+      }
+
+      console.log('Raw data:', { conversationsData, allParticipants, profiles });
+
+      // Combine the data
+      return (conversationsData || []).map((conv: Conversation) => {
+        // Get participants for this conversation
+        const conversationParticipants = (allParticipants || [])
+          .filter((p: ConversationParticipant) => p.conversation_id === conv.id)
+          .map((p: ConversationParticipant) => {
+            const profile = (profiles || []).find((prof: UserProfile) => prof.user_id === p.user_id);
+            return {
+              user_id: p.user_id,
+              profiles: profile || {
+                user_id: p.user_id,
+                full_name: 'Unknown User',
+                profile_picture_url: null,
+                role: 'student'
+              }
+            };
+          });
+
+        // Find the other participant (not the current user)
+        const otherParticipant = conversationParticipants.find((p: ConversationParticipant) => p.user_id !== user.id);
+        const profile = otherParticipant?.profiles;
+        
+        return {
+          id: conv.id,
+          created_at: conv.created_at,
+          participants: conversationParticipants,
+          sender: profile ? {
+            name: profile.full_name,
+            username: `@${profile.full_name.toLowerCase().replace(/\s+/g, '')}`,
+            avatar: profile.profile_picture_url || '/static/images/avatar/default.jpg',
+            online: true,
+          } : {
+            name: 'Unknown User',
+            username: '@unknown',
+            avatar: '/static/images/avatar/default.jpg',
+            online: false,
+          },
+          messages: [],
+        };
+      });
+  }, [user]); // Only depend on user, not the entire function
+
   // Fetch conversations with robust error handling
   const {
     data: conversations,
@@ -49,55 +153,69 @@ const MessagesImproved: React.FC = () => {
     fromFallback,
   } = useQuery<ChatProps[]>(
     'conversations',
-    async () => {
-      if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          created_at,
-          conversation_participants!inner(
-            user_id,
-            profiles!inner(
-              user_id,
-              full_name,
-              profile_picture_url,
-              role
-            )
-          )
-        `)
-        .eq('conversation_participants.user_id', user.id);
-
-      if (error) throw error;
-
-      return (data || []).map((conv: Conversation) => {
-        const otherParticipant = conv.conversation_participants.find(
-          (p: ConversationParticipant) => p.user_id !== user.id
-        );
-        const profile = otherParticipant?.profiles;
-        
-        return {
-          id: conv.id,
-          created_at: conv.created_at,
-          participants: conv.conversation_participants,
-          sender: profile ? {
-            name: profile.full_name,
-            username: `@${profile.full_name.toLowerCase().replace(/\s+/g, '')}`,
-            avatar: profile.profile_picture_url || '/static/images/avatar/default.jpg',
-            online: true,
-          } : undefined,
-          messages: [],
-        };
-      });
-    },
+    fetchConversations,
     {
       enabled: !!user,
       fallbackData: mockConversations,
-      retry: 2,
-      timeout: 10000,
+      retry: 1, // Reduced retries
+      timeout: 6000, // Reduced timeout
+      refetchOnWindowFocus: false, // Disable refetching on window focus
     }
   );
+
+  // Memoize the messages query function
+  const fetchMessages = useCallback(async () => {
+    if (!selectedChat) return [];
+    
+    console.log('Fetching messages for conversation:', selectedChat.id);
+
+      // Get messages
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('messages')
+        .select('id, conversation_id, sender_id, content, created_at')
+        .eq('conversation_id', selectedChat.id)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) {
+        console.error('Messages query error:', messagesError);
+        throw messagesError;
+      }
+
+      if (!messagesData || messagesData.length === 0) {
+        console.log('No messages found for conversation');
+        return [];
+      }
+
+      // Get profiles for message senders
+      const senderIds = [...new Set(messagesData.map((m: any) => m.sender_id))];
+      const { data: senderProfiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('user_id, full_name, profile_picture_url')
+        .in('user_id', senderIds);
+
+      if (profilesError) {
+        console.error('Sender profiles error:', profilesError);
+        throw profilesError;
+      }
+
+      // Combine messages with sender profiles
+      const messagesWithProfiles = messagesData.map((message: any) => {
+        const senderProfile = (senderProfiles || []).find((p: any) => p.user_id === message.sender_id);
+        return {
+          ...message,
+          profiles: senderProfile ? {
+            full_name: senderProfile.full_name,
+            profile_picture_url: senderProfile.profile_picture_url
+          } : {
+            full_name: 'Unknown User',
+            profile_picture_url: null
+          }
+        };
+      });
+      
+      console.log('Messages with profiles:', messagesWithProfiles);
+      return messagesWithProfiles;
+  }, [selectedChat, user?.id]); // Dependencies: selectedChat and user.id
 
   // Fetch messages for selected conversation
   const {
@@ -106,28 +224,12 @@ const MessagesImproved: React.FC = () => {
     refetch: refetchMessages,
   } = useQuery<MessageProps[]>(
     `messages-${selectedChat?.id}`,
-    async () => {
-      if (!selectedChat) return [];
-
-      const { data, error } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          sender:profiles!messages_sender_id_fkey(
-            full_name,
-            profile_picture_url
-          )
-        `)
-        .eq('conversation_id', selectedChat.id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
-    },
+    fetchMessages,
     {
       enabled: !!selectedChat,
       retry: 2,
       timeout: 10000,
+      refetchOnWindowFocus: true,
     }
   );
 
@@ -209,16 +311,25 @@ const MessagesImproved: React.FC = () => {
           p: 4,
         }}
       >
-        <Alert color="danger" sx={{ maxWidth: 400, textAlign: 'center' }}>
+        <Alert color="danger" sx={{ maxWidth: 600, textAlign: 'center' }}>
           <Typography level="h4" sx={{ mb: 1 }}>
             Failed to load conversations
           </Typography>
           <Typography level="body-md" sx={{ mb: 2 }}>
             {getErrorMessage(conversationsError)}
           </Typography>
-          <Button onClick={refetchConversations} variant="outlined">
-            Try Again
-          </Button>
+          <Box sx={{ display: 'flex', gap: 1, mt: 2 }}>
+            <Button onClick={refetchConversations} variant="outlined">
+              Try Again
+            </Button>
+            <Button 
+              onClick={() => debugMessagesSystem()} 
+              variant="soft"
+              size="sm"
+            >
+              Debug
+            </Button>
+          </Box>
         </Alert>
       </Box>
     );
@@ -241,6 +352,25 @@ const MessagesImproved: React.FC = () => {
             Retry Connection
           </Button>
         </Alert>
+        
+        {/* Debug controls */}
+        <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+          <Button 
+            size="sm" 
+            variant="soft" 
+            onClick={() => debugMessagesSystem()}
+          >
+            Debug System
+          </Button>
+          <Button 
+            size="sm" 
+            variant="soft" 
+            onClick={() => createTestConversation().then(() => refetchConversations())}
+          >
+            Create Test Chat
+          </Button>
+        </Box>
+        
         <MessagesContent
           conversations={conversations || []}
           selectedChat={selectedChat}
@@ -255,15 +385,38 @@ const MessagesImproved: React.FC = () => {
   }
 
   return (
-    <MessagesContent
-      conversations={conversations || []}
-      selectedChat={selectedChat}
-      messages={messages || []}
-      messagesLoading={messagesLoading}
-      sendingMessage={sendingMessage}
-      onChatSelect={handleChatSelect}
-      onSendMessage={handleSendMessage}
-    />
+    <Box>
+      {/* Temporary debug controls */}
+      <Box sx={{ p: 2, borderBottom: '1px solid', borderColor: 'divider', display: 'flex', gap: 1 }}>
+        <Button 
+          size="sm" 
+          variant="soft" 
+          onClick={() => debugMessagesSystem()}
+        >
+          Debug System
+        </Button>
+        <Button 
+          size="sm" 
+          variant="soft" 
+          onClick={() => createTestConversation().then(() => refetchConversations())}
+        >
+          Create Test Chat
+        </Button>
+        <Typography level="body-sm" sx={{ alignSelf: 'center', ml: 2 }}>
+          Conversations: {conversations?.length || 0} | Selected: {selectedChat?.id || 'none'}
+        </Typography>
+      </Box>
+      
+      <MessagesContent
+        conversations={conversations || []}
+        selectedChat={selectedChat}
+        messages={messages || []}
+        messagesLoading={messagesLoading}
+        sendingMessage={sendingMessage}
+        onChatSelect={handleChatSelect}
+        onSendMessage={handleSendMessage}
+      />
+    </Box>
   );
 };
 

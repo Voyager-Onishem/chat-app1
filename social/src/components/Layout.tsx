@@ -7,6 +7,9 @@ import Sidebar from './Sidebar';
 import Header from './Header';
 import DebugPanel from './DebugPanel';
 
+/**
+ * Main app layout with sidebar and content area.
+ */
 export default function Layout() {
   return (
     <CssVarsProvider disableTransitionOnChange>

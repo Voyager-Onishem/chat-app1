@@ -1,7 +1,7 @@
 import Avatar from '@mui/joy/Avatar';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
-import type { MessageProps, UserProps } from '../../types/messages';
+import type { MessageProps } from '../../types/messages';
 import { useAuth } from '../../context/AuthContext';
 
 interface ChatBubbleProps {
@@ -10,7 +10,7 @@ interface ChatBubbleProps {
 
 export const ChatBubble = ({ message }: ChatBubbleProps) => {
   const { user } = useAuth();
-  const isOwnMessage = message.sender === 'You' || message.sender_id === user?.id;
+  const isOwnMessage = message.sender_id === user?.id;
 
   return (
     <Box
@@ -57,7 +57,7 @@ export const ChatBubble = ({ message }: ChatBubbleProps) => {
               mt: 0.5,
             }}
           >
-            {message.timestamp || (message.created_at ? new Date(message.created_at).toLocaleTimeString() : '')}
+            {message.created_at ? new Date(message.created_at).toLocaleTimeString() : ''}
           </Typography>
         </Box>
       </Box>

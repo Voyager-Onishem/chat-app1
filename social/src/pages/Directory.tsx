@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { profileService, connectionService } from '../services/api';
 import { useQuery, useMutation } from '../hooks/useQuery';
 import { mockProfiles } from '../utils/mockData';
-import { LoadingSpinner, ProfileCardSkeleton } from '../components/common/LoadingSpinner';
+import { ProfileCardSkeleton } from '../components/common/LoadingSpinner';
 import { getErrorMessage } from '../utils/errorHandling';
 import type { UserProfile } from '../types';
 import {
@@ -59,6 +59,7 @@ export const Directory: React.FC = () => {
       enabled: true,
       retry: 3,
       timeout: 15000,
+      refetchOnWindowFocus: true,
     }
   );
 

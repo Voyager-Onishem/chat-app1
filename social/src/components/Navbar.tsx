@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { supabase } from '../supabase-client';
 import { useAuth } from '../context/AuthContext';
 import { NotificationDropdown } from './NotificationDropdown';
 // import { ConnectionStatusIndicator } from './ConnectionStatusIndicator';
-import { Modal, ModalDialog, ModalClose, Typography, Button, Box, CircularProgress } from '@mui/joy';
+import { Modal, ModalDialog, ModalClose, Typography, Button, Box } from '@mui/joy';
 import { performCompleteLogout, clearAllStorage, clearAllCookies } from '../utils/auth-cleanup';
 import { checkAdminAccess } from '../utils/robust-query';
 
@@ -135,7 +134,7 @@ export const Navbar = () => {
 
           {/* Desktop Auth & Notifications */}
           <div className="hidden md:flex items-center space-x-4">
-            <ConnectionStatusIndicator />
+            {/* <ConnectionStatusIndicator /> */}
             {isAuthenticated && <NotificationDropdown />}
             {isAuthenticated && (
               <button

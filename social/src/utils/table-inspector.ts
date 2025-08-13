@@ -43,7 +43,7 @@ export const inspectAnnouncementsTable = async () => {
             await supabase.from('announcements').delete().eq('title', 'test');
             break;
           }
-        } catch (e) {
+        } catch (e: any) {
           console.log('Failed with:', Object.keys(testData), e.message);
         }
       }

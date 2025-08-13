@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../supabase-client';
 import { robustQuery } from '../utils/robust-query';
+import { debounce } from '../utils/debounce';
 import type { ApiResponse } from '../types';
 
 export interface UseQueryOptions {
@@ -30,7 +31,7 @@ export function useQuery<T = any>(
   const {
     enabled = true,
     retry = 2,
-    timeout = 15000,
+    timeout = 8000, // Reduced from 15000 to 8000ms
     fallbackData = null,
     refetchOnWindowFocus = false,
   } = options;
@@ -47,23 +48,38 @@ export function useQuery<T = any>(
     setError(null);
 
     try {
-      const result = await robustQuery(queryFn(), {
-        timeout,
-        retries: retry,
-        fallbackData,
-      });
+      // Create an AbortController for better timeout handling
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), timeout);
 
-      setData(result.data);
-      setFromFallback(result.fromFallback);
+      // Execute query with abort signal
+      const queryResult = await Promise.race([
+        queryFn(),
+        new Promise((_, reject) => {
+          controller.signal.addEventListener('abort', () => {
+            reject(new Error('Query timeout'));
+          });
+        })
+      ]);
+
+      clearTimeout(timeoutId);
       
-      if (result.error) {
-        setError(result.error.message);
+      if (queryResult && queryResult.error) {
+        console.warn('Query failed:', queryResult.error);
+        setError(queryResult.error.message || 'Query failed');
+        setData(fallbackData);
+        setFromFallback(true);
+      } else {
+        setData(queryResult.data || queryResult);
+        setFromFallback(false);
+        setError(null);
       }
-    } catch (err) {
+    } catch (err: any) {
+      console.warn('Query execution error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
       setData(fallbackData);
-      setFromFallback(true);
+      setFromFallback(!!fallbackData);
     } finally {
       setLoading(false);
     }
@@ -77,18 +93,34 @@ export function useQuery<T = any>(
     executeQuery();
   }, [executeQuery]);
 
-  // Refetch on window focus if enabled
+  // Refetch on window focus if enabled (debounced)
   useEffect(() => {
     if (!refetchOnWindowFocus) return;
 
-    const handleFocus = () => {
+    const debouncedRefetch = debounce(() => {
       if (!document.hidden) {
+        console.log('Window focus detected, refetching...');
         refetch();
+      }
+    }, 1000); // 1 second debounce
+
+    const handleFocus = () => {
+      debouncedRefetch();
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        debouncedRefetch();
       }
     };
 
     window.addEventListener('focus', handleFocus);
-    return () => window.removeEventListener('focus', handleFocus);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [refetch, refetchOnWindowFocus]);
 
   return {

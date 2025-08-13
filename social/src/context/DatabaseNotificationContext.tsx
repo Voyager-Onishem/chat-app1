@@ -1,17 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabase-client';
 import { useAuth } from './AuthContext';
-
-export interface DatabaseNotification {
-  id: string;
-  user_id: string;
-  type: 'connection_request' | 'connection_accepted' | 'connection_rejected' | 'message' | 'announcement';
-  title: string;
-  message: string;
-  data?: any;
-  read: boolean;
-  created_at: string;
-}
+import type { DatabaseNotification } from '../types';
 
 interface DatabaseNotificationContextType {
   notifications: DatabaseNotification[];
@@ -24,6 +14,9 @@ interface DatabaseNotificationContextType {
 
 const DatabaseNotificationContext = createContext<DatabaseNotificationContextType | undefined>(undefined);
 
+/**
+ * Provides database-backed notifications with realtime updates.
+ */
 export function DatabaseNotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<DatabaseNotification[]>([]);
   const { user } = useAuth();
@@ -104,7 +97,7 @@ export function DatabaseNotificationProvider({ children }: { children: React.Rea
         return;
       }
 
-      const { requester_id, addressee_id } = notification.data;
+      const { requester_id, addressee_id } = (notification.data as { requester_id?: string; addressee_id?: string }) || {};
 
       // Update connection status using composite key
       const { error: connectionError } = await supabase
