@@ -3,25 +3,18 @@ import { supabase } from '../supabase-client';
 import { Box, Typography, CircularProgress, Alert, Button, Card, Avatar, Input, Textarea, Modal, ModalDialog, ModalClose, Chip } from '@mui/joy';
 import { Add as AddIcon, LocationOn as LocationIcon, CalendarToday as CalendarIcon } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
-import { Event, UserProfile, RSVP } from '../types';
-
-interface CreateEventForm {
-  title: string;
-  description: string;
-  location: string;
-  event_time: string;
-}
+import type { Event, UserProfile, RSVP, CreateEventFormData, UserRole } from '../types';
 
 export const Events = () => {
   const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<string>('');
   const [currentUser, setCurrentUser] = useState<any>(null);
-  const [userRole, setUserRole] = useState<string>('');
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [userRole, setUserRole] = useState<UserRole | ''>('');
+  const [showCreateModal, setShowCreateModal] = useState<boolean>(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateEventForm>();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateEventFormData>();
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -141,7 +134,7 @@ export const Events = () => {
     return ['admin', 'moderator'].includes(userRole);
   };
 
-  const handleCreateEvent = async (formData: CreateEventForm) => {
+  const handleCreateEvent = async (formData: CreateEventFormData) => {
     try {
       const { error } = await supabase
         .from('events')

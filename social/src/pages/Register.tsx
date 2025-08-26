@@ -2,15 +2,16 @@ import { useForm } from 'react-hook-form';
 import { useState } from 'react';
 import { supabase } from '../supabase-client';
 import { Button, Input, Typography, Box, Select, Option, Alert } from '@mui/joy';
+import type { RegisterFormData, UserRole } from '../types';
 
 export const Register = () => {
-  const { register, handleSubmit, formState: { errors } } = useForm();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-  const [role, setRole] = useState('student');
+  const { register, handleSubmit, formState: { errors } } = useForm<RegisterFormData>();
+  const [loading, setLoading] = useState<boolean>(false);
+  const [error, setError] = useState<string>('');
+  const [success, setSuccess] = useState<boolean>(false);
+  const [role, setRole] = useState<UserRole>('student');
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: RegisterFormData) => {
     setLoading(true);
     setError('');
     setSuccess(false);
@@ -36,8 +37,9 @@ export const Register = () => {
         });
       if (pendingError) throw pendingError;
       setSuccess(true);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -86,7 +88,7 @@ export const Register = () => {
         {errors.password && <Typography color="danger">{errors.password.message as string}</Typography>}
         <Select
           value={role}
-          onChange={(_e, value) => setRole(value || 'student')}
+          onChange={(_e, value) => setRole((value as UserRole) || 'student')}
           sx={{ mb: 2 }}
         >
           <Option value="student">Student</Option>

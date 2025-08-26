@@ -20,14 +20,20 @@ import Avatar from '@mui/joy/Avatar';
 import Alert from '@mui/joy/Alert';
 import EditRoundedIcon from '@mui/icons-material/EditRounded';
 import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
+import type { ProfileFormData } from '../types';
+
+interface MessageState {
+  type: 'success' | 'error';
+  text: string;
+}
 
 export const Profile = () => {
   const { user, profile, refreshProfile } = useSimpleAuth();
-  const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+  const [message, setMessage] = useState<MessageState | null>(null);
   
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<ProfileFormData>({
     full_name: '',
     bio: '',
     location: '',
@@ -51,7 +57,7 @@ export const Profile = () => {
     }
   }, [profile]);
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: keyof ProfileFormData, value: string) => {
     setFormData(prev => ({
       ...prev,
       [field]: value,

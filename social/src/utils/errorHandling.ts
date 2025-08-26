@@ -2,12 +2,16 @@
  * Centralized error handling utilities
  */
 
+export interface AppErrorDetails {
+  [key: string]: unknown;
+}
+
 export class AppError extends Error {
   code: string;
   statusCode?: number;
-  details?: any;
+  details?: AppErrorDetails;
 
-  constructor(message: string, code: string = 'UNKNOWN_ERROR', statusCode?: number, details?: any) {
+  constructor(message: string, code: string = 'UNKNOWN_ERROR', statusCode?: number, details?: AppErrorDetails) {
     super(message);
     this.name = 'AppError';
     this.code = code;
@@ -46,13 +50,20 @@ export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];
 /**
  * Parse Supabase errors into user-friendly messages
  */
-export function parseSupabaseError(error: any): AppError {
+export function parseSupabaseError(error: unknown): AppError {
   if (!error) {
     return new AppError('An unknown error occurred', ErrorCodes.SERVER_ERROR);
   }
 
   // Handle different types of Supabase errors
-  switch (error.code) {
+  const errorObj = error as { code?: string; message?: string };
+  const errorDetails: AppErrorDetails = {
+    originalError: errorObj,
+    code: errorObj.code,
+    message: errorObj.message
+  };
+
+  switch (errorObj.code) {
     case 'invalid_credentials':
     case 'email_not_confirmed':
     case 'invalid_grant':
@@ -60,7 +71,7 @@ export function parseSupabaseError(error: any): AppError {
         'Invalid email or password. Please check your credentials.',
         ErrorCodes.INVALID_CREDENTIALS,
         401,
-        error
+        errorDetails
       );
 
     case 'signup_disabled':
@@ -68,7 +79,7 @@ export function parseSupabaseError(error: any): AppError {
         'Registration is currently disabled. Please contact support.',
         ErrorCodes.UNAUTHORIZED,
         403,
-        error
+        errorDetails
       );
 
     case 'email_address_invalid':
@@ -76,7 +87,7 @@ export function parseSupabaseError(error: any): AppError {
         'Please enter a valid email address.',
         ErrorCodes.VALIDATION_ERROR,
         400,
-        error
+        errorDetails
       );
 
     case 'weak_password':
@@ -84,7 +95,7 @@ export function parseSupabaseError(error: any): AppError {
         'Password is too weak. Please choose a stronger password.',
         ErrorCodes.VALIDATION_ERROR,
         400,
-        error
+        errorDetails
       );
 
     case 'PGRST116': // Row not found
@@ -92,7 +103,7 @@ export function parseSupabaseError(error: any): AppError {
         'The requested resource was not found.',
         ErrorCodes.NOT_FOUND,
         404,
-        error
+        errorDetails
       );
 
     case 'PGRST301': // Permission denied
@@ -100,7 +111,7 @@ export function parseSupabaseError(error: any): AppError {
         'You do not have permission to perform this action.',
         ErrorCodes.INSUFFICIENT_PERMISSIONS,
         403,
-        error
+        errorDetails
       );
 
     case '23505': // Unique constraint violation
@@ -108,7 +119,7 @@ export function parseSupabaseError(error: any): AppError {
         'This record already exists. Please check your input.',
         ErrorCodes.DUPLICATE_ENTRY,
         409,
-        error
+        errorDetails
       );
 
     case '23503': // Foreign key constraint violation
@@ -116,7 +127,7 @@ export function parseSupabaseError(error: any): AppError {
         'This action cannot be completed due to data dependencies.',
         ErrorCodes.VALIDATION_ERROR,
         400,
-        error
+        errorDetails
       );
 
     case '08006': // Connection failure
@@ -126,7 +137,7 @@ export function parseSupabaseError(error: any): AppError {
         'Unable to connect to the server. Please check your internet connection.',
         ErrorCodes.CONNECTION_FAILED,
         503,
-        error
+        errorDetails
       );
 
     case '57014': // Statement timeout
@@ -135,7 +146,7 @@ export function parseSupabaseError(error: any): AppError {
         'The request took too long to complete. Please try again.',
         ErrorCodes.TIMEOUT,
         504,
-        error
+        errorDetails
       );
 
     case '53300': // Too many connections
@@ -144,19 +155,19 @@ export function parseSupabaseError(error: any): AppError {
         'The service is temporarily overloaded. Please try again in a moment.',
         ErrorCodes.SERVICE_UNAVAILABLE,
         503,
-        error
+        errorDetails
       );
 
     default:
       // Check for common error patterns in the message
-      const message = error.message?.toLowerCase() || '';
+      const message = errorObj.message?.toLowerCase() || '';
       
       if (message.includes('timeout') || message.includes('timed out')) {
         return new AppError(
           'The request timed out. Please try again.',
           ErrorCodes.TIMEOUT,
           504,
-          error
+          errorDetails
         );
       }
 
@@ -165,7 +176,7 @@ export function parseSupabaseError(error: any): AppError {
           'Network error. Please check your internet connection.',
           ErrorCodes.NETWORK_ERROR,
           503,
-          error
+          errorDetails
         );
       }
 
@@ -174,16 +185,16 @@ export function parseSupabaseError(error: any): AppError {
           'You do not have permission to perform this action.',
           ErrorCodes.INSUFFICIENT_PERMISSIONS,
           403,
-          error
+          errorDetails
         );
       }
 
       // Default error
       return new AppError(
-        error.message || 'An unexpected error occurred. Please try again.',
+        errorObj.message || 'An unexpected error occurred. Please try again.',
         ErrorCodes.SERVER_ERROR,
         500,
-        error
+        errorDetails
       );
   }
 }
@@ -210,7 +221,7 @@ export function getErrorMessage(error: unknown): string {
 /**
  * Log error to console with additional context
  */
-export function logError(error: unknown, context?: string, additionalData?: any): void {
+export function logError(error: unknown, context?: string, additionalData?: Record<string, unknown>): void {
   const timestamp = new Date().toISOString();
   const prefix = context ? `[${context}]` : '[Error]';
   
@@ -249,7 +260,7 @@ export async function retryOperation<T>(
   maxRetries: number = 3,
   baseDelay: number = 1000
 ): Promise<T> {
-  let lastError: any;
+  let lastError: unknown;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -263,14 +274,14 @@ export async function retryOperation<T>(
 
       // Check if error is retryable
       const appError = parseSupabaseError(error);
-      const retryableCodes = [
+      const retryableCodes: ErrorCode[] = [
         ErrorCodes.TIMEOUT,
         ErrorCodes.NETWORK_ERROR,
         ErrorCodes.CONNECTION_FAILED,
         ErrorCodes.SERVICE_UNAVAILABLE,
       ];
 
-      if (!retryableCodes.includes(appError.code as any)) {
+      if (!retryableCodes.includes(appError.code as ErrorCode)) {
         throw appError;
       }
 

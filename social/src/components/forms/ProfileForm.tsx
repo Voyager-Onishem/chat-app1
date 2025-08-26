@@ -8,6 +8,7 @@ import { supabase } from '../../supabase-client';
 import { sanitizeAndValidate, ValidationRules, FileValidation } from '../../utils/validation';
 import { getErrorMessage } from '../../utils/errorHandling';
 import type { ProfileFormData, UserProfile } from '../../types';
+import type { ProfileFormProps } from '../../types/props';
 import {
   Box,
   Button,
@@ -28,12 +29,6 @@ import {
   Save,
   Cancel,
 } from '@mui/icons-material';
-
-interface ProfileFormProps {
-  profile: UserProfile | null;
-  onSave: (profile: UserProfile) => void;
-  onCancel: () => void;
-}
 
 export const ProfileForm: React.FC<ProfileFormProps> = ({
   profile,
@@ -85,7 +80,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
 
       if (!validation.isValid) {
         Object.entries(validation.errors).forEach(([field, message]) => {
-          setFieldError(field as keyof ProfileFormData, {
+          setFieldError(field as any, {
             type: 'manual',
             message,
           });

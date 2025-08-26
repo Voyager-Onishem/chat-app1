@@ -2,6 +2,11 @@
  * Centralized type definitions for the application
  */
 
+// Re-export all types from sub-modules
+export * from './common';
+export * from './forms';
+export * from './props';
+
 export type UserRole = 'admin' | 'alumni' | 'student' | 'moderator' | 'developer';
 
 export interface UserProfile {
@@ -114,19 +119,19 @@ export interface FormErrors {
 }
 
 // Form types
-export interface LoginFormData {
+export interface LoginFormData extends Record<string, unknown> {
   email: string;
   password: string;
 }
 
-export interface RegisterFormData {
+export interface RegisterFormData extends Record<string, unknown> {
   full_name: string;
   email: string;
   password: string;
   role: UserRole;
 }
 
-export interface ProfileFormData {
+export interface ProfileFormData extends Record<string, unknown> {
   full_name: string;
   bio?: string;
   location?: string;
@@ -136,7 +141,7 @@ export interface ProfileFormData {
   major?: string;
 }
 
-export interface CreateJobFormData {
+export interface CreateJobFormData extends Record<string, unknown> {
   title: string;
   company: string;
   location: string;
@@ -144,14 +149,14 @@ export interface CreateJobFormData {
   apply_url?: string;
 }
 
-export interface CreateEventFormData {
+export interface CreateEventFormData extends Record<string, unknown> {
   title: string;
   description?: string;
   location?: string;
   event_time: string;
 }
 
-export interface CreateAnnouncementFormData {
+export interface CreateAnnouncementFormData extends Record<string, unknown> {
   title: string;
   content: string;
 }

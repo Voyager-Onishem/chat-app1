@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import type { User, Session } from '@supabase/supabase-js';
+import type { User, Session, AuthError, AuthChangeEvent } from '@supabase/supabase-js';
 import { supabase } from '../supabase-client';
 import type { UserProfile } from '../types';
 
@@ -56,7 +56,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     // Clean up old data once
     cleanupOldAuthData();
     // Get initial session
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }: { data: { session: Session | null }, error: AuthError | null }) => {
       if (error) {
         console.error('Session error:', error);
       }
@@ -68,7 +68,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
     // Listen for auth changes - Supabase handles all the complexity
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event: AuthChangeEvent, session: Session | null) => {
       console.log('Auth event:', event, session ? 'Session active' : 'No session');
       
       setSession(session);
@@ -77,7 +77,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       
       if (session?.user) {
         // Fetch profile only when needed
-        fetchProfile(session.user.id);
+        await fetchProfile(session.user.id);
       } else {
         setProfile(null);
       }
@@ -88,7 +88,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
       // Only respond to Supabase auth changes
       if (event.key?.startsWith('sb-') && event.key.includes('auth-token')) {
         // Refresh session when auth changes in another tab
-        supabase.auth.getSession().then(({ data: { session } }) => {
+        supabase.auth.getSession().then(({ data: { session } }: { data: { session: Session | null } }) => {
           if (session?.user !== user) {
             setSession(session);
             setUser(session?.user ?? null);
@@ -111,7 +111,7 @@ export function SimpleAuthProvider({ children }: { children: React.ReactNode }) 
         console.log('Page visible again - verifying session...');
         
         // Simple session verification (trust Supabase's token refresh)
-        supabase.auth.getSession().then(({ data: { session }, error }) => {
+        supabase.auth.getSession().then(({ data: { session }, error }: { data: { session: Session | null }, error: AuthError | null }) => {
           if (error) {
             console.log('Session verification failed:', error);
             // Let Supabase auth state change handle the rest

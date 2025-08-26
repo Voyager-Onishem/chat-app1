@@ -7,7 +7,7 @@ export interface ValidationRule {
   minLength?: number;
   maxLength?: number;
   pattern?: RegExp;
-  custom?: (value: any) => string | null;
+  custom?: (value: unknown) => string | null;
 }
 
 export interface ValidationResult {
@@ -66,7 +66,7 @@ export function validatePassword(password: string): { isValid: boolean; message?
 /**
  * Validate a single field
  */
-export function validateField(value: any, rules: ValidationRule): string | null {
+export function validateField(value: unknown, rules: ValidationRule): string | null {
   if (rules.required && (!value || (typeof value === 'string' && value.trim() === ''))) {
     return 'This field is required';
   }
@@ -99,13 +99,15 @@ export function validateField(value: any, rules: ValidationRule): string | null 
 /**
  * Validate multiple fields
  */
-export function validateFields(data: Record<string, any>, rules: Record<string, ValidationRule>): ValidationResult {
+export function validateFields(data: Record<string, unknown>, rules: Partial<Record<string, ValidationRule>>): ValidationResult {
   const errors: Record<string, string> = {};
   
   for (const [field, fieldRules] of Object.entries(rules)) {
-    const error = validateField(data[field], fieldRules);
-    if (error) {
-      errors[field] = error;
+    if (fieldRules) {
+      const error = validateField(data[field], fieldRules);
+      if (error) {
+        errors[field] = error;
+      }
     }
   }
   
@@ -138,22 +140,22 @@ export const ValidationRules = {
     required: true,
     minLength: 2,
     maxLength: 100,
-    pattern: /^[a-zA-Z\s\-'\.]+$/,
+    pattern: /^[a-zA-Z\s\-'.]+$/,
   },
   
   company: {
     maxLength: 100,
-    pattern: /^[a-zA-Z0-9\s\-\&\.\,]+$/,
+    pattern: /^[a-zA-Z0-9\s\-&.,]+$/,
   },
   
   jobTitle: {
     maxLength: 100,
-    pattern: /^[a-zA-Z0-9\s\-\&\.\,\/]+$/,
+    pattern: /^[a-zA-Z0-9\s\-&.,/]+$/,
   },
   
   location: {
     maxLength: 100,
-    pattern: /^[a-zA-Z0-9\s\-\,\.]+$/,
+    pattern: /^[a-zA-Z0-9\s\-,.]+$/,
   },
   
   bio: {
@@ -162,12 +164,14 @@ export const ValidationRules = {
   
   major: {
     maxLength: 100,
-    pattern: /^[a-zA-Z\s\-\&\.]+$/,
+    pattern: /^[a-zA-Z\s\-&.]+$/,
   },
   
   graduationYear: {
-    custom: (value: string) => {
-      const year = parseInt(value, 10);
+    custom: (value: unknown) => {
+      if (!value) return null;
+      const stringValue = String(value);
+      const year = parseInt(stringValue, 10);
       const currentYear = new Date().getFullYear();
       
       if (isNaN(year)) {
@@ -184,10 +188,11 @@ export const ValidationRules = {
   
   url: {
     pattern: /^https?:\/\/.+\..+/,
-    custom: (value: string) => {
+    custom: (value: unknown) => {
       if (!value) return null;
+      const stringValue = String(value);
       try {
-        new URL(value);
+        new URL(stringValue);
         return null;
       } catch {
         return 'Please enter a valid URL';
@@ -199,9 +204,9 @@ export const ValidationRules = {
 /**
  * Sanitize and validate form data
  */
-export function sanitizeAndValidate<T extends Record<string, any>>(
+export function sanitizeAndValidate<T extends Record<string, unknown>>(
   data: T,
-  rules: Record<keyof T, ValidationRule>
+  rules: Partial<Record<keyof T, ValidationRule>>
 ): { sanitizedData: T; validation: ValidationResult } {
   const sanitizedData = { ...data } as T;
   
@@ -209,17 +214,15 @@ export function sanitizeAndValidate<T extends Record<string, any>>(
   for (const key in sanitizedData) {
     const value = sanitizedData[key];
     if (typeof value === 'string') {
-      (sanitizedData as any)[key] = sanitizeInput(value);
+      sanitizedData[key] = sanitizeInput(value) as T[Extract<keyof T, string>];
     }
   }
-  
+
   // Validate
   const validation = validateFields(sanitizedData, rules);
   
   return { sanitizedData, validation };
-}
-
-/**
+}/**
  * File validation utilities
  */
 export const FileValidation = {

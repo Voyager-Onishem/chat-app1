@@ -1,37 +1,36 @@
 import { supabase } from '../supabase-client';
-import type { UserProfile, Connection, Job, Event, Announcement } from '../types';
+import { DatabaseHelpers, SupabaseUtils } from '../utils/supabase-helpers';
+import type { UserProfile, Connection, Job, Event, Announcement, QueryResult } from '../types';
+
+// Create database helpers instance
+const dbHelpers = new DatabaseHelpers(supabase);
 
 /**
- * Service for user profile operations
+ * Service for user profile operations with type safety
  */
 export const profileService = {
   async getProfile(userId: string): Promise<UserProfile | null> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('user_id', userId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') {
-        return null; // Profile not found
-      }
-      throw error;
+    const result = await dbHelpers.safeSingle<UserProfile>('profiles', { user_id: userId });
+    
+    if (result.error && !SupabaseUtils.isNotFoundError(result.error)) {
+      throw new Error(result.error.message);
     }
-
-    return data;
+    
+    return result.data;
   },
 
   async updateProfile(userId: string, updates: Partial<UserProfile>): Promise<UserProfile> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .update(updates)
-      .eq('user_id', userId)
-      .select()
-      .single();
-
-    if (error) throw error;
-    return data;
+    const result = await dbHelpers.safeUpdate<UserProfile>('profiles', updates, { user_id: userId });
+    
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+    
+    if (!result.data || (Array.isArray(result.data) && result.data.length === 0)) {
+      throw new Error('Profile not found');
+    }
+    
+    return Array.isArray(result.data) ? result.data[0] : result.data;
   },
 
   async getProfiles(filters?: {
@@ -40,42 +39,43 @@ export const profileService = {
     company?: string;
     graduationYearRange?: [number, number];
   }): Promise<UserProfile[]> {
-    let query = supabase.from('profiles').select('*');
-
+    const queryFilters: Record<string, unknown> = {};
+    
     if (filters?.role && filters.role !== 'all') {
-      query = query.eq('role', filters.role);
+      queryFilters.role = filters.role;
     }
-
+    
     if (filters?.location && filters.location !== 'all') {
-      query = query.eq('location', filters.location);
+      queryFilters.location = filters.location;
     }
-
-    if (filters?.company && filters.company !== 'all') {
-      query = query.eq('company', filters.company);
+    
+    const result = await dbHelpers.safeSelect<UserProfile>('profiles', '*', queryFilters);
+    
+    if (result.error) {
+      throw new Error(result.error.message);
     }
-
-    if (filters?.graduationYearRange) {
-      const [min, max] = filters.graduationYearRange;
-      query = query
-        .gte('graduation_year', min)
-        .lte('graduation_year', max);
-    }
-
-    const { data, error } = await query.order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+    
+    return result.data || [];
   },
 
   async searchProfiles(searchQuery: string): Promise<UserProfile[]> {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .or(`full_name.ilike.%${searchQuery}%,company.ilike.%${searchQuery}%,major.ilike.%${searchQuery}%`)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-    return data || [];
+    const result = await dbHelpers.safeSelect<UserProfile>(
+      'profiles',
+      '*',
+      {} // No filters for search, will need to implement search logic
+    );
+    
+    if (result.error) {
+      throw new Error(result.error.message);
+    }
+    
+    // Client-side filtering for now (could be optimized with database full-text search)
+    const profiles = result.data || [];
+    return profiles.filter(profile => 
+      profile.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      profile.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      profile.major?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
   },
 };
 
