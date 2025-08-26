@@ -7,7 +7,7 @@ export interface ValidationRule {
   minLength?: number;
   maxLength?: number;
   pattern?: RegExp;
-  custom?: (value: any) => string | null;
+  custom?: (value: unknown) => string | null;
 }
 
 export interface ValidationResult {
@@ -66,7 +66,7 @@ export function validatePassword(password: string): { isValid: boolean; message?
 /**
  * Validate a single field
  */
-export function validateField(value: any, rules: ValidationRule): string | null {
+export function validateField(value: unknown, rules: ValidationRule): string | null {
   if (rules.required && (!value || (typeof value === 'string' && value.trim() === ''))) {
     return 'This field is required';
   }

@@ -76,16 +76,16 @@ export const Announcements = () => {
       }
 
       // Fetch profiles for authors
-      const userIds = announcementsData.map((a: any) => a.user_id);
+      const userIds = announcementsData.map((a: Announcement) => a.user_id);
       const { data: profilesData } = await supabase
         .from('profiles')
         .select('user_id, full_name, profile_picture_url, role')
         .in('user_id', userIds);
 
       // Map announcements and handle missing profiles
-      const announcementsWithAuthors = announcementsData.map((announcement: any) => ({
+      const announcementsWithAuthors = announcementsData.map((announcement: Announcement) => ({
         ...announcement,
-        author: profilesData?.find((p: any) => p.user_id === announcement.user_id) || {
+        author: profilesData?.find((p: { user_id: string; full_name: string; profile_picture_url?: string }) => p.user_id === announcement.user_id) || {
           full_name: 'Unknown User',
           profile_picture_url: null,
           role: 'unknown'
@@ -127,16 +127,16 @@ export const Announcements = () => {
 
       if (announcementsData && announcementsData.length > 0) {
         // Fetch profiles for authors
-        const userIds = announcementsData.map((a: any) => a.user_id);
+        const userIds = announcementsData.map((a: Announcement) => a.user_id);
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('user_id, full_name, profile_picture_url, role')
           .in('user_id', userIds);
 
         // Map announcements and handle missing profiles
-        const announcementsWithAuthors = announcementsData.map((announcement: any) => ({
+        const announcementsWithAuthors = announcementsData.map((announcement: Announcement) => ({
           ...announcement,
-          author: profilesData?.find((p: any) => p.user_id === announcement.user_id) || {
+          author: profilesData?.find((p: { user_id: string; full_name: string; profile_picture_url?: string }) => p.user_id === announcement.user_id) || {
             full_name: 'Unknown User',
             profile_picture_url: null,
             role: 'unknown'
@@ -147,8 +147,8 @@ export const Announcements = () => {
       } else {
         setAnnouncements([]);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) { const errorMessage = err instanceof Error ? err.message : "Operation failed";
+      setError(errorMessage);
     }
   };
 
@@ -172,7 +172,7 @@ export const Announcements = () => {
 
       setAnnouncements(prev => prev.filter(ann => ann.id !== announcementId));
       setSuccess('Announcement deleted successfully!');
-    } catch (err: any) {
+    } catch (err: unknown) { const errorMessage = err instanceof Error ? err.message : "Operation failed";
       setError(err.message || 'Failed to delete announcement. You may not have permission.');
     }
   };
