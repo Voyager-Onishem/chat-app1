@@ -9,7 +9,7 @@ interface DiagnosticResult {
   test: string;
   status: 'success' | 'error' | 'warning';
   message: string;
-  details?: any;
+  details?: Record<string, unknown>;
   timing?: number;
 }
 
@@ -41,12 +41,16 @@ export const DebugPanel: React.FC = () => {
         message: response.ok ? `Connected successfully (${timing}ms)` : `HTTP ${response.status}: ${response.statusText}`,
         timing
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Connection failed';
+      const errorDetails: Record<string, unknown> = error instanceof Error 
+        ? { message: error.message, name: error.name } 
+        : { message: 'Unknown error' };
       diagnostics.push({
         test: 'Basic API Connection',
         status: 'error',
-        message: error.message || 'Connection failed',
-        details: error
+        message: errorMessage,
+        details: errorDetails
       });
     }
 
@@ -59,12 +63,16 @@ export const DebugPanel: React.FC = () => {
         message: session ? `Authenticated as ${session.user.email}` : 'Not authenticated',
         details: { hasSession: !!session, error }
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Auth check failed';
+      const errorDetails: Record<string, unknown> = error instanceof Error 
+        ? { message: error.message, name: error.name } 
+        : { message: 'Unknown error' };
       diagnostics.push({
         test: 'Authentication',
         status: 'error',
-        message: error.message || 'Auth check failed',
-        details: error
+        message: errorMessage,
+        details: errorDetails
       });
     }
 
@@ -84,12 +92,16 @@ export const DebugPanel: React.FC = () => {
         details: { data, error },
         timing
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Table access failed';
+      const errorDetails: Record<string, unknown> = error instanceof Error 
+        ? { message: error.message, name: error.name } 
+        : { message: 'Unknown error' };
       diagnostics.push({
         test: 'Profiles Table Access',
         status: 'error',
-        message: error.message || 'Table access failed',
-        details: error
+        message: errorMessage,
+        details: errorDetails
       });
     }
 
@@ -109,12 +121,16 @@ export const DebugPanel: React.FC = () => {
         details: { data, error },
         timing
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Table access failed';
+      const errorDetails: Record<string, unknown> = error instanceof Error 
+        ? { message: error.message, name: error.name } 
+        : { message: 'Unknown error' };
       diagnostics.push({
         test: 'Connections Table Access',
         status: 'error',
-        message: error.message || 'Table access failed',
-        details: error
+        message: errorMessage,
+        details: errorDetails
       });
     }
 
@@ -140,12 +156,16 @@ export const DebugPanel: React.FC = () => {
           details: { data, error, isAdmin: !!data },
           timing
         });
-      } catch (error: any) {
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : 'Admin check failed';
+        const errorDetails: Record<string, unknown> = error instanceof Error 
+          ? { message: error.message, name: error.name } 
+          : { message: 'Unknown error' };
         diagnostics.push({
           test: 'Admin Table Access',
           status: 'error',
-          message: error.message || 'Admin check failed',
-          details: error
+          message: errorMessage,
+          details: errorDetails
         });
       }
     }
@@ -165,12 +185,16 @@ export const DebugPanel: React.FC = () => {
         details: accessTest,
         timing
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'RLS bypass test failed';
+      const errorDetails: Record<string, unknown> = error instanceof Error 
+        ? { message: error.message, name: error.name } 
+        : { message: 'Unknown error' };
       diagnostics.push({
         test: 'RLS Bypass System',
         status: 'error',
-        message: error.message || 'RLS bypass test failed',
-        details: error
+        message: errorMessage,
+        details: errorDetails
       });
     }
 
@@ -191,12 +215,16 @@ export const DebugPanel: React.FC = () => {
         details: result,
         timing
       });
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Robust query test failed';
+      const errorDetails: Record<string, unknown> = error instanceof Error 
+        ? { message: error.message, name: error.name } 
+        : { message: 'Unknown error' };
       diagnostics.push({
         test: 'Robust Query System',
         status: 'error',
-        message: error.message || 'Robust query test failed',
-        details: error
+        message: errorMessage,
+        details: errorDetails
       });
     }
 
