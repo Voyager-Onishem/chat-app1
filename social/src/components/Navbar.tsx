@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from '../context/AuthContext';
+import { useSimpleAuth } from '../context/SimpleAuthContext';
 import { NotificationDropdown } from './NotificationDropdown';
 // import { ConnectionStatusIndicator } from './ConnectionStatusIndicator';
 import { Modal, ModalDialog, ModalClose, Typography, Button, Box } from '@mui/joy';
@@ -13,7 +13,7 @@ export const Navbar = () => {
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const navigate = useNavigate();
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useSimpleAuth();
   const isAuthenticated = !!user;
 
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
+import { useSimpleAuth } from '../context/SimpleAuthContext';
 import { useQuery } from '../hooks/useQuery';
 import { supabase } from '../supabase-client';
 import { Box, Typography, Button, Card, Grid, Avatar, Stack, Divider } from '@mui/joy';
@@ -48,7 +48,7 @@ interface Announcement {
 }
 
 export const Home = () => {
-  const { user, profile } = useAuth();
+  const { user, profile } = useSimpleAuth();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalConnections: 0,

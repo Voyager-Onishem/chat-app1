@@ -2,14 +2,14 @@ import Avatar from '@mui/joy/Avatar';
 import Box from '@mui/joy/Box';
 import Typography from '@mui/joy/Typography';
 import type { MessageProps } from '../../types/messages';
-import { useAuth } from '../../context/AuthContext';
+import { useSimpleAuth } from '../../context/SimpleAuthContext';
 
 interface ChatBubbleProps {
   message: MessageProps;
 }
 
 export const ChatBubble = ({ message }: ChatBubbleProps) => {
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
   const isOwnMessage = message.sender_id === user?.id;
 
   return (

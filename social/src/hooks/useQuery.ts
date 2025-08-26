@@ -31,7 +31,7 @@ export function useQuery<T = any>(
   const {
     enabled = true,
     retry = 2,
-    timeout = 8000, // Reduced from 15000 to 8000ms
+    timeout = 15000, // Increased from 8000 to 15000ms for better reliability
     fallbackData = null,
     refetchOnWindowFocus = false,
   } = options;
@@ -100,7 +100,11 @@ export function useQuery<T = any>(
     const debouncedRefetch = debounce(() => {
       if (!document.hidden) {
         console.log('Window focus detected, refetching...');
-        refetch();
+        // Add random delay to stagger multiple query refetches
+        const delay = Math.random() * 2000; // 0-2 seconds random delay
+        setTimeout(() => {
+          refetch();
+        }, delay);
       }
     }, 1000); // 1 second debounce
 

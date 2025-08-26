@@ -14,9 +14,9 @@ vi.mock('../components/ColorSchemeToggle', () => ({
   default: () => null,
 }))
 
-// Mock AuthContext hook to provide stable user/profile
-vi.mock('../context/AuthContext', () => ({
-  useAuth: () => ({
+// Mock SimpleAuthContext hook to provide stable user/profile
+vi.mock('../context/SimpleAuthContext', () => ({
+  useSimpleAuth: () => ({
     user: { id: 'u1', email: 'test@example.com' },
     profile: { full_name: 'Test User', role: 'alumni' },
     loading: false,

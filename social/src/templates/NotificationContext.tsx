@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabase-client';
-import { useAuth } from '../context/AuthContext';
+import { useSimpleAuth } from '../context/SimpleAuthContext';
 
 interface Notification {
   id: string;
@@ -30,7 +30,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   // Safely get auth context with error handling
   let user = null;
   try {
-    const authContext = useAuth();
+    const authContext = useSimpleAuth();
     user = authContext.user;
   } catch (error) {
     console.warn('Auth context not available in NotificationProvider:', error);

@@ -6,6 +6,7 @@ interface Props {
   children: ReactNode;
   fallback?: ReactNode;
   onError?: (error: Error, errorInfo: ErrorInfo) => void;
+  resetKeys?: Array<string | number>;
 }
 
 interface State {
@@ -15,6 +16,8 @@ interface State {
 }
 
 export class ErrorBoundaryEnhanced extends Component<Props, State> {
+  private resetTimeoutId: number | null = null;
+
   constructor(props: Props) {
     super(props);
     this.state = {
@@ -38,14 +41,34 @@ export class ErrorBoundaryEnhanced extends Component<Props, State> {
       errorInfo,
     });
 
-    // Log error to console for debugging
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    // Enhanced error logging
+    console.group('🚨 ErrorBoundary caught an error');
+    console.error('Error:', error);
+    console.error('Error Info:', errorInfo);
+    console.error('Component Stack:', errorInfo.componentStack);
+    console.groupEnd();
 
     // Call custom error handler if provided
     this.props.onError?.(error, errorInfo);
 
-    // You could also send error to logging service here
-    // logErrorToService(error, errorInfo);
+    // In production, you'd send this to an error reporting service
+    if (process.env.NODE_ENV === 'production') {
+      // Example: logErrorToService(error, errorInfo);
+    }
+  }
+
+  componentDidUpdate(prevProps: Props) {
+    const { resetKeys } = this.props;
+    const { hasError } = this.state;
+    
+    // Reset error boundary when resetKeys change
+    if (hasError && resetKeys && prevProps.resetKeys !== resetKeys) {
+      this.setState({
+        hasError: false,
+        error: null,
+        errorInfo: null,
+      });
+    }
   }
 
   handleRetry = () => {
@@ -67,7 +90,7 @@ export class ErrorBoundaryEnhanced extends Component<Props, State> {
         return this.props.fallback;
       }
 
-      // Default error UI
+      // Enhanced default error UI
       return (
         <Box
           sx={{
@@ -83,22 +106,22 @@ export class ErrorBoundaryEnhanced extends Component<Props, State> {
             variant="outlined"
             color="danger"
             startDecorator={<BugReportRounded />}
-            sx={{ maxWidth: 500, mb: 3 }}
+            sx={{ maxWidth: 600, mb: 3 }}
           >
             <Stack spacing={2}>
               <Typography level="title-md">Something went wrong</Typography>
               <Typography level="body-sm">
-                An unexpected error occurred. This has been logged and our team will investigate.
+                An unexpected error occurred. You can try refreshing the page or contact support if the problem persists.
               </Typography>
               
               {process.env.NODE_ENV === 'development' && this.state.error && (
-                <Box sx={{ mt: 2 }}>
+                <Box sx={{ mt: 2, p: 2, bgcolor: 'neutral.50', borderRadius: 'sm' }}>
                   <Typography level="body-xs" sx={{ fontFamily: 'monospace', wordBreak: 'break-word' }}>
-                    {this.state.error.toString()}
+                    <strong>Error:</strong> {this.state.error.toString()}
                   </Typography>
                   {this.state.errorInfo && (
                     <Typography level="body-xs" sx={{ fontFamily: 'monospace', wordBreak: 'break-word', mt: 1 }}>
-                      {this.state.errorInfo.componentStack}
+                      <strong>Component Stack:</strong> {this.state.errorInfo.componentStack}
                     </Typography>
                   )}
                 </Box>

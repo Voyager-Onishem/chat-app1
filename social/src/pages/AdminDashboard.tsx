@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useSimpleAuth } from '../context/SimpleAuthContext';
 import { supabase } from '../supabase-client';
 import Box from '@mui/joy/Box';
 import Breadcrumbs from '@mui/joy/Breadcrumbs';
@@ -23,7 +23,7 @@ import AnnouncementRoundedIcon from '@mui/icons-material/AnnouncementRounded';
 import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded';
 
 export const AdminDashboard = () => {
-  const { profile } = useAuth();
+  const { profile } = useSimpleAuth();
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalConnections: 0,

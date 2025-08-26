@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import React from 'react'
-import { AuthProvider, useAuth } from '../context/AuthContext'
+import { SimpleAuthProvider, useSimpleAuth } from '../context/SimpleAuthContext'
 
 // Mock Supabase client
 vi.mock('../supabase-client', () => ({
@@ -35,10 +35,10 @@ vi.mock('../utils/auth-cleanup', () => ({
 describe('AuthContext', () => {
   it('provides auth context values', () => {
     const wrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-      <AuthProvider>{children}</AuthProvider>
+      <SimpleAuthProvider>{children}</SimpleAuthProvider>
     )
 
-    const { result } = renderHook(() => useAuth(), { wrapper })
+    const { result } = renderHook(() => useSimpleAuth(), { wrapper })
 
     expect(result.current.user).toBe(null)
     expect(result.current.profile).toBe(null)

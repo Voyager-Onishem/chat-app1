@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useSimpleAuth } from '../context/SimpleAuthContext';
 import { useQuery, useMutation, useSubscription } from '../hooks/useQuery';
 import { useNotifications } from '../context/NotificationContext';
 import { supabase } from '../supabase-client';
@@ -36,7 +36,7 @@ const mockConversations: ChatProps[] = [
 ];
 
 const MessagesImproved: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
   const { error: notifyError, success } = useNotifications();
   const [selectedChat, setSelectedChat] = useState<ChatProps | null>(null);
 

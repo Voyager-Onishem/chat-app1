@@ -8,7 +8,7 @@ import ListItemDecorator from '@mui/joy/ListItemDecorator';
 import Typography from '@mui/joy/Typography';
 import Sheet from '@mui/joy/Sheet';
 import type { ChatProps } from '../../types/messages';
-import { useAuth } from '../../context/AuthContext';
+import { useSimpleAuth } from '../../context/SimpleAuthContext';
 
 interface ChatsPaneProps {
   chats: ChatProps[];
@@ -17,7 +17,7 @@ interface ChatsPaneProps {
 }
 
 export default function ChatsPane({ chats, selectedChatId, onChatSelect }: ChatsPaneProps) {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser } = useSimpleAuth();
   
   const getOtherParticipant = (chat: ChatProps) => {
     if (chat.participants) {

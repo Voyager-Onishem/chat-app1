@@ -31,8 +31,7 @@ import AdminPanelSettingsRoundedIcon from '@mui/icons-material/AdminPanelSetting
 
 import ColorSchemeToggle from './ColorSchemeToggle';
 import { NotificationDropdown } from './NotificationDropdown';
-import { useAuth } from '../context/AuthContext';
-import { performCompleteLogout, clearAllStorage, clearAllCookies } from '../utils/auth-cleanup';
+import { useSimpleAuth } from '../context/SimpleAuthContext';
 
 function Toggler(props: {
   defaultExpanded?: boolean;
@@ -79,7 +78,7 @@ export default function Sidebar(): React.ReactElement {
   let authError = false;
   
   try {
-    const authContext = useAuth();
+    const authContext = useSimpleAuth();
     user = authContext.user;
     profile = authContext.profile;
     signOut = authContext.signOut;
@@ -103,37 +102,18 @@ export default function Sidebar(): React.ReactElement {
       const confirmed = window.confirm('Are you sure you want to logout?');
       if (!confirmed) return;
 
-      // Show loading state
-      const logoutButton = document.querySelector('[data-testid="logout-button"]') as HTMLElement;
-      if (logoutButton) {
-        logoutButton.style.pointerEvents = 'none';
-        logoutButton.style.opacity = '0.6';
+      // Use the simplified signOut function
+      if (signOut) {
+        await signOut();
       }
-
-      // Use comprehensive logout
-      await performCompleteLogout();
       
-      // Force page reload for clean state
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 100);
+      // Navigate to login
+      navigate('/login');
       
-      // Show success message
-      console.log('Successfully logged out');
     } catch (error) {
-      console.error('Error during logout:', error);
-      // Fallback cleanup
-      try {
-        if (signOut) {
-          await signOut();
-        }
-        clearAllStorage();
-        clearAllCookies();
-        window.location.href = '/login';
-      } catch (fallbackError) {
-        console.error('Fallback logout failed:', fallbackError);
-        window.location.href = '/login';
-      }
+      console.error('Logout error:', error);
+      // Force navigate on error
+      navigate('/login');
     }
   };
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useSimpleAuth } from '../context/SimpleAuthContext';
 import { useQuery, useMutation, useSubscription } from '../hooks/useQuery';
 import { useNotifications } from '../context/NotificationContext';
 import { supabase } from '../supabase-client';
@@ -37,7 +37,7 @@ const mockConversations: ChatProps[] = [
 ];
 
 const MessagesImproved: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
   const { error: notifyError, success } = useNotifications();
   const [selectedChat, setSelectedChat] = useState<ChatProps | null>(null);
 
@@ -157,9 +157,9 @@ const MessagesImproved: React.FC = () => {
     {
       enabled: !!user,
       fallbackData: mockConversations,
-      retry: 1, // Reduced retries
-      timeout: 6000, // Reduced timeout
-      refetchOnWindowFocus: false, // Disable refetching on window focus
+      retry: 2, // Increased retries
+      timeout: 20000, // Increased timeout for complex query
+      refetchOnWindowFocus: false, // Keep disabled due to complex multi-step query
     }
   );
 
@@ -228,8 +228,8 @@ const MessagesImproved: React.FC = () => {
     {
       enabled: !!selectedChat,
       retry: 2,
-      timeout: 10000,
-      refetchOnWindowFocus: true,
+      timeout: 15000, // Increased timeout
+      refetchOnWindowFocus: false, // Disable to prevent conflicts with conversations query
     }
   );
 

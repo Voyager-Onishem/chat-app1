@@ -1,5 +1,5 @@
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { SimpleAuthProvider, useSimpleAuth } from "./context/SimpleAuthContext";
 import { ToastNotificationProvider } from "./context/NotificationContext";
 import { DatabaseNotificationProvider } from "./context/DatabaseNotificationContext";
 import Layout from "./components/Layout";
@@ -19,10 +19,11 @@ import { Jobs } from "./pages/Jobs";
 import { Events } from "./pages/Events";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import SystemDiagnostics from "./components/SystemDiagnostics";
+import AuthDebugPanel from "./components/AuthDebugPanel";
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading } = useSimpleAuth();
   
   if (loading) {
     return (
@@ -47,7 +48,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
 // Public Route Component (redirects to home if already logged in)
 function PublicRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+  const { user, loading } = useSimpleAuth();
 
   if (loading) {
     return (
@@ -116,6 +117,7 @@ function AppRoutes() {
         <Route path="events" element={<Events />} />
         <Route path="admin-dashboard" element={<AdminDashboard />} />
         <Route path="diagnostics" element={<SystemDiagnostics />} />
+        <Route path="auth-debug" element={<AuthDebugPanel />} />
       </Route>
 
       {/* Catch-all route - redirect /home to / */}
@@ -131,7 +133,7 @@ function App() {
   return (
     <ErrorBoundaryEnhanced>
       <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AuthProvider>
+        <SimpleAuthProvider>
           <ErrorBoundaryEnhanced>
             <ToastNotificationProvider>
               <DatabaseNotificationProvider>
@@ -141,7 +143,7 @@ function App() {
               </DatabaseNotificationProvider>
             </ToastNotificationProvider>
           </ErrorBoundaryEnhanced>
-        </AuthProvider>
+        </SimpleAuthProvider>
       </BrowserRouter>
     </ErrorBoundaryEnhanced>
   );

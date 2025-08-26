@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useAuth } from '../../context/AuthContext';
+import { useSimpleAuth } from '../../context/SimpleAuthContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { profileService } from '../../services/api';
 import { supabase } from '../../supabase-client';
@@ -40,7 +40,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({
   onSave,
   onCancel,
 }) => {
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
   const { success, error: notifyError } = useNotifications();
   const [loading, setLoading] = useState(false);
   const [photoUploading, setPhotoUploading] = useState(false);

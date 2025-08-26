@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { useSimpleAuth } from '../context/SimpleAuthContext';
 import { profileService, connectionService } from '../services/api';
 import { useQuery, useMutation } from '../hooks/useQuery';
 import { mockProfiles } from '../utils/mockData';
@@ -34,7 +34,7 @@ import {
 } from '@mui/icons-material';
 
 export const Directory: React.FC = () => {
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
   const [filteredProfiles, setFilteredProfiles] = useState<UserProfile[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRole, setSelectedRole] = useState<string>('all');

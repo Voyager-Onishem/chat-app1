@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Box, Button, Typography, Card, Stack, Chip, Alert } from '@mui/joy';
 import { supabase } from '../supabase-client';
 import { robustQueries } from '../utils/robust-query';
-import { useAuth } from '../context/AuthContext';
+import { useSimpleAuth } from '../context/SimpleAuthContext';
 import { testUserDatabaseAccess } from '../utils/auth-bypass';
 
 interface DiagnosticResult {
@@ -17,7 +17,7 @@ export const DebugPanel: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isRunning, setIsRunning] = useState(false);
   const [results, setResults] = useState<DiagnosticResult[]>([]);
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
 
   const runDiagnostics = async () => {
     setIsRunning(true);

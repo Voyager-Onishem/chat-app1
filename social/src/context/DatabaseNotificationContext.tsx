@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabase-client';
-import { useAuth } from './AuthContext';
+import { useSimpleAuth } from './SimpleAuthContext';
 import type { DatabaseNotification } from '../types';
 
 interface DatabaseNotificationContextType {
@@ -19,7 +19,7 @@ const DatabaseNotificationContext = createContext<DatabaseNotificationContextTyp
  */
 export function DatabaseNotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<DatabaseNotification[]>([]);
-  const { user } = useAuth();
+  const { user } = useSimpleAuth();
 
   const fetchNotifications = async () => {
     if (!user) return;
