@@ -2,10 +2,17 @@ import { useState } from 'react';
 import { supabase } from '../supabase-client';
 import { Button, Input, Typography, Box, Alert } from '@mui/joy';
 
+interface AuthTestResult {
+  success: boolean;
+  message: string;
+  user?: unknown;
+  session?: unknown;
+}
+
 export const AuthTest = () => {
   const [email, setEmail] = useState('student@college.edu');
   const [password, setPassword] = useState('password123');
-  const [result, setResult] = useState<any>(null);
+  const [result, setResult] = useState<AuthTestResult | null>(null);
   const [loading, setLoading] = useState(false);
 
   const testAuth = async () => {
@@ -43,19 +50,22 @@ export const AuthTest = () => {
             .eq('user_id', data.user.id)
             .single();
             
-          setResult((prev: any) => ({
-            ...prev,
+          setResult((prev: AuthTestResult | null) => ({
+            success: true,
+            message: prev?.message || 'Success',
+            user: prev?.user,
+            session: prev?.session,
             profile: profile,
             profileError: profileError?.message
           }));
         }
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Test error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Authentication test failed';
       setResult({
         success: false,
-        error: err.message,
-        code: 'exception'
+        message: `Error: ${errorMessage}`
       });
     } finally {
       setLoading(false);
@@ -75,11 +85,11 @@ export const AuthTest = () => {
         canConnectToDb: !error,
         error: error?.message
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Connection test failed';
       setResult({
-        connectionTest: true,
-        canConnectToDb: false,
-        error: err.message
+        success: false,
+        message: `Connection error: ${errorMessage}`
       });
     } finally {
       setLoading(false);

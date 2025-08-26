@@ -47,8 +47,9 @@ export const ProfileChecker = () => {
         output += `\nTotal profiles in database: ${count}`;
       }
 
-    } catch (error: any) {
-      output += `\n❌ Exception: ${error.message}`;
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Profile check failed';
+      output += `\n❌ Exception: ${errorMessage}`;
     }
 
     setResult(output);
@@ -107,8 +108,9 @@ export const ProfileChecker = () => {
       }
 
       setResult(output);
-    } catch (error: any) {
-      setResult(`Exception: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Connection test failed';
+      setResult(`Exception: ${errorMessage}`);
     }
 
     setLoading(false);

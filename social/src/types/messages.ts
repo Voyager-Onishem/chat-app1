@@ -1,11 +1,11 @@
-export type UserProps = {
+export interface UserProps {
   name: string;
   username: string;
   avatar: string;
   online: boolean;
-};
+}
 
-export type MessageProps = {
+export interface MessageProps {
   id: string | number;
   content: string;
   timestamp?: string;
@@ -23,9 +23,9 @@ export type MessageProps = {
     type: string;
     size: string;
   };
-};
+}
 
-export type ChatProps = {
+export interface ChatProps {
   id: string;
   sender?: UserProps;
   messages: MessageProps[];
@@ -39,4 +39,4 @@ export type ChatProps = {
       role: string;
     };
   }>;
-}; 
+} 

@@ -1,10 +1,19 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase-client';
 import { Box, Typography, Button, Alert } from '@mui/joy';
+import { User } from '@supabase/supabase-js';
+import { UserProfile } from '../types';
+
+interface AuthState {
+  user: User | null;
+  profile: UserProfile | null;
+  loading: boolean;
+  error: string;
+}
 
 export const AuthDebug = () => {
-  const [user, setUser] = useState<any>(null);
-  const [profile, setProfile] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -37,13 +46,14 @@ export const AuthDebug = () => {
           setError(`No profile found for user ID: ${user.id}`);
         } else if (profileData.length > 1) {
           setError(`Multiple profiles found for user ID: ${user.id}`);
-          setProfile(profileData);
+          setProfile(profileData[0] as UserProfile);
         } else {
-          setProfile(profileData[0]);
+          setProfile(profileData[0] as UserProfile);
         }
       }
-    } catch (err: any) {
-      setError(`Unexpected error: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Unexpected error: ${errorMessage}`);
     }
   };
 
@@ -67,8 +77,9 @@ export const AuthDebug = () => {
         setError('Login successful! Check user info below.');
         await checkCurrentUser();
       }
-    } catch (err: any) {
-      setError(`Test login error: ${err.message}`);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      setError(`Test login error: ${errorMessage}`);
     } finally {
       setLoading(false);
     }

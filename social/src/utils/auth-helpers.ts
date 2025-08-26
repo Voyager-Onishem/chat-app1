@@ -41,11 +41,22 @@ export const authenticateUser = async (
       error: result.error
     };
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Authentication failed:', error);
     
+    // Type guard for error with message
+    const getErrorMessage = (err: unknown): string => {
+      if (err instanceof Error) return err.message;
+      if (typeof err === 'object' && err !== null && 'message' in err) {
+        return String((err as { message: unknown }).message);
+      }
+      return 'Unknown authentication error';
+    };
+    
+    const errorMessage = getErrorMessage(error);
+    
     // If it's a timeout error, try a direct approach
-    if (error.message.includes('timeout')) {
+    if (errorMessage.includes('timeout')) {
       console.log('🔄 Attempting direct authentication fallback...');
       return await directAuthFallback(email, password);
     }
@@ -112,11 +123,18 @@ async function directAuthFallback(email: string, password: string): Promise<Auth
       } as AuthError
     };
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('❌ Direct authentication failed:', error);
+    
+    // Convert unknown error to AuthError
+    const authError: AuthError = {
+      message: error instanceof Error ? error.message : 'Direct authentication failed',
+      name: 'AuthError'
+    } as AuthError;
+    
     return {
       user: null,
-      error: error as AuthError
+      error: authError
     };
   }
 }

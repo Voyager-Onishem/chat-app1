@@ -2,13 +2,20 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabase-client';
 import { useSimpleAuth } from '../context/SimpleAuthContext';
 
+// Supabase realtime payload interface
+interface SupabasePayload<T = unknown> {
+  new: T;
+  old: T;
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+}
+
 interface Notification {
   id: string;
   user_id: string;
   type: 'connection_request' | 'connection_accepted' | 'connection_rejected' | 'message' | 'announcement';
   title: string;
   message: string;
-  data?: any;
+  data?: Record<string, unknown>;
   read: boolean;
   created_at: string;
 }
@@ -190,8 +197,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
           },
-          (payload: any) => {
-            setNotifications(prev => [payload.new as Notification, ...prev]);
+          (payload: SupabasePayload<Notification>) => {
+            setNotifications(prev => [payload.new, ...prev]);
           }
         )
         .on(
@@ -202,10 +209,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
           },
-          (payload: any) => {
+          (payload: SupabasePayload<Notification>) => {
             setNotifications(prev => 
               prev.map(notif => 
-                notif.id === payload.new.id ? payload.new as Notification : notif
+                notif.id === payload.new.id ? payload.new : notif
               )
             );
           }

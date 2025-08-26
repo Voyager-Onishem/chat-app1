@@ -3,7 +3,7 @@ import { robustQuery } from '../utils/robust-query';
 import type { UserProfile, Connection, Job, Event, Announcement } from '../types';
 
 export interface DataFetchOptions {
-  fallbackData?: any;
+  fallbackData?: unknown;
   timeout?: number;
   retries?: number;
   enabled?: boolean;
@@ -91,7 +91,7 @@ export const dataService = {
       }
 
       // Then fetch poster profiles
-      const posterIds = [...new Set(jobs.map((job: any) => job.posted_by_user_id))];
+      const posterIds = [...new Set((jobs as Job[]).map(job => job.posted_by_user_id))];
       const profilesResult = await robustQuery(
         supabase
           .from('profiles')
@@ -101,10 +101,10 @@ export const dataService = {
       );
 
       const profiles = profilesResult.data || [];
-      const profilesMap = new Map(profiles.map((p: any) => [p.user_id, p]));
+      const profilesMap = new Map((profiles as UserProfile[]).map(p => [p.user_id, p]));
 
       // Combine jobs with poster info
-      return jobs.map((job: any) => ({
+      return (jobs as Job[]).map(job => ({
         ...job,
         posted_by: profilesMap.get(job.posted_by_user_id),
       }));
@@ -137,8 +137,8 @@ export const dataService = {
       }
 
       // Then fetch creator profiles and RSVPs
-      const creatorIds = [...new Set(events.map((event: any) => event.created_by_user_id))];
-      const eventIds = events.map((event: any) => event.id);
+      const creatorIds = [...new Set((events as Event[]).map(event => event.created_by_user_id))];
+      const eventIds = (events as Event[]).map(event => event.id);
 
       const [profilesResult, rsvpsResult] = await Promise.all([
         robustQuery(
@@ -160,19 +160,19 @@ export const dataService = {
       const profiles = profilesResult.data || [];
       const rsvps = rsvpsResult.data || [];
 
-      const profilesMap = new Map(profiles.map((p: any) => [p.user_id, p]));
-      const rsvpsByEvent = new Map();
+      const profilesMap = new Map((profiles as UserProfile[]).map(p => [p.user_id, p]));
+      const rsvpsByEvent = new Map<string, unknown[]>();
 
       // Group RSVPs by event
-      rsvps.forEach((rsvp: any) => {
+      (rsvps as Array<{ event_id: string }>).forEach(rsvp => {
         if (!rsvpsByEvent.has(rsvp.event_id)) {
           rsvpsByEvent.set(rsvp.event_id, []);
         }
-        rsvpsByEvent.get(rsvp.event_id).push(rsvp);
+        rsvpsByEvent.get(rsvp.event_id)?.push(rsvp);
       });
 
       // Combine events with creator and RSVP info
-      return events.map((event: any) => ({
+      return (events as Event[]).map(event => ({
         ...event,
         created_by: profilesMap.get(event.created_by_user_id),
         rsvps: rsvpsByEvent.get(event.id) || [],

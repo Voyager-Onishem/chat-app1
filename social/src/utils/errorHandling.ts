@@ -46,9 +46,25 @@ export type ErrorCode = typeof ErrorCodes[keyof typeof ErrorCodes];
 /**
  * Parse Supabase errors into user-friendly messages
  */
-export function parseSupabaseError(error: any): AppError {
+export function parseSupabaseError(error: unknown): AppError {
   if (!error) {
     return new AppError('An unknown error occurred', ErrorCodes.SERVER_ERROR);
+  }
+
+  // Type guard for error objects
+  const isErrorWithCode = (err: unknown): err is { code: string; message?: string } => {
+    return typeof err === 'object' && err !== null && 'code' in err;
+  };
+
+  // If not an error object, create generic error
+  if (!isErrorWithCode(error)) {
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred. Please try again.';
+    return new AppError(
+      message,
+      ErrorCodes.SERVER_ERROR,
+      500,
+      error
+    );
   }
 
   // Handle different types of Supabase errors

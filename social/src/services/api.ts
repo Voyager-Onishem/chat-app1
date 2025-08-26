@@ -260,7 +260,7 @@ export const announcementService = {
     }
 
     // Get user IDs to fetch profiles
-    const userIds = announcementsData.map((a: any) => a.author_id);
+    const userIds = (announcementsData as Array<{ author_id: string }>).map(a => a.author_id);
     const { data: profilesData, error: profilesError } = await supabase
       .from('profiles')
       .select('*')
@@ -269,9 +269,9 @@ export const announcementService = {
     if (profilesError) throw profilesError;
 
     // Combine data
-    return announcementsData.map((announcement: any) => ({
+    return (announcementsData as Announcement[]).map(announcement => ({
       ...announcement,
-      author: profilesData?.find((p: any) => p.user_id === announcement.author_id) || undefined
+      author: (profilesData as UserProfile[])?.find(p => p.user_id === announcement.author_id) || undefined
     }));
   },
 

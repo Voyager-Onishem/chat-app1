@@ -55,9 +55,10 @@ export const SimpleAuthTest = () => {
         setResult(`Auth successful! User ID: ${authResult.data.user?.id}`);
       }
       
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log('5. Exception caught:', error);
-      setResult(`Exception: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      setResult(`Exception: ${errorMessage}`);
     }
     
     console.log('6. Setting loading to false');
@@ -81,8 +82,9 @@ export const SimpleAuthTest = () => {
         setResult('Connection successful! Database accessible.');
         console.log('Connection successful:', data);
       }
-    } catch (error: any) {
-      setResult(`Connection exception: ${error.message}`);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Connection test failed';
+      setResult(`Connection exception: ${errorMessage}`);
       console.log('Connection exception:', error);
     }
     
@@ -113,9 +115,10 @@ export const SimpleAuthTest = () => {
       const data = await response.json();
       console.log('Direct fetch data:', data);
       setResult(`Direct fetch: ${response.status} - ${JSON.stringify(data).substring(0, 100)}...`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log('Direct fetch error:', error);
-      setResult(`Direct fetch error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Direct fetch failed';
+      setResult(`Direct fetch error: ${errorMessage}`);
     }
     
     setLoading(false);
@@ -138,9 +141,10 @@ export const SimpleAuthTest = () => {
       } else {
         setResult('Enhanced auth failed: No user returned');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log('Enhanced auth exception:', error);
-      setResult(`Enhanced auth exception: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Enhanced auth failed';
+      setResult(`Enhanced auth exception: ${errorMessage}`);
     }
     
     setLoading(false);
@@ -191,9 +195,10 @@ export const SimpleAuthTest = () => {
         const errorData = await response.json();
         setResult(`HTTP ${response.status}: ${errorData.error_description || 'Unknown error'}`);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.log('Workaround error:', error);
-      setResult(`Workaround error: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Workaround failed';
+      setResult(`Workaround error: ${errorMessage}`);
     }
     
     setLoading(false);

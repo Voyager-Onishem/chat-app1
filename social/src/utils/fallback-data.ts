@@ -44,7 +44,7 @@ export const fallbackAnnouncements = [
 /**
  * Get safe fallback data based on the type of query
  */
-export function getSafeFallbackData(queryType: string): any {
+export function getSafeFallbackData(queryType: string): unknown {
   switch (queryType) {
     case 'profiles':
       // This will be imported dynamically to avoid circular imports
@@ -69,33 +69,76 @@ export function getSafeFallbackData(queryType: string): any {
 /**
  * Provide contextual error messages based on error types
  */
-export function getErrorMessage(error: any): string {
+export function getErrorMessage(error: unknown): string {
   if (!error) return 'Unknown error occurred';
   
+  // Type guard for error-like objects
+  const hasProperty = (obj: unknown, prop: string): boolean => {
+    return typeof obj === 'object' && obj !== null && prop in obj;
+  };
+
   // Network/Connection errors
-  if (error.message?.includes('fetch') || error.name === 'NetworkError') {
+  if (hasProperty(error, 'message') && typeof (error as { message: unknown }).message === 'string') {
+    const errorMessage = (error as { message: string }).message;
+    if (errorMessage.includes('fetch')) {
+      return 'Network connection error. Please check your internet connection.';
+    }
+  }
+  
+  if (hasProperty(error, 'name') && (error as { name: unknown }).name === 'NetworkError') {
     return 'Network connection error. Please check your internet connection.';
   }
   
   // Database timeout errors
-  if (error.code === '57014' || error.message?.includes('timeout')) {
+  const errorCode = hasProperty(error, 'code') ? (error as { code: unknown }).code : null;
+  if (errorCode === '57014') {
     return 'Database query timed out. Using cached data.';
   }
   
+  if (hasProperty(error, 'message') && typeof (error as { message: unknown }).message === 'string') {
+    const errorMessage = (error as { message: string }).message;
+    if (errorMessage.includes('timeout')) {
+      return 'Database query timed out. Using cached data.';
+    }
+  }
+  
   // Server errors (500 series)
-  if (error.code === '500' || error.status?.toString().startsWith('5')) {
+  if (errorCode === '500') {
     return 'Server temporarily unavailable. Using offline data.';
   }
   
+  if (hasProperty(error, 'status') && typeof (error as { status: unknown }).status === 'number') {
+    const status = (error as { status: number }).status;
+    if (status.toString().startsWith('5')) {
+      return 'Server temporarily unavailable. Using offline data.';
+    }
+  }
+  
   // Authentication/Permission errors
-  if (error.code?.startsWith('42') || error.message?.includes('permission')) {
+  if (errorCode && typeof errorCode === 'string' && errorCode.startsWith('42')) {
     return 'Access denied. You may need to log in again.';
   }
   
+  if (hasProperty(error, 'message') && typeof (error as { message: unknown }).message === 'string') {
+    const errorMessage = (error as { message: string }).message;
+    if (errorMessage.includes('permission')) {
+      return 'Access denied. You may need to log in again.';
+    }
+  }
+  
   // Configuration errors
-  if (error.code === '54001') {
+  if (errorCode === '54001') {
     return 'Server configuration issue. Using backup data.';
   }
   
-  return error.message || 'Database error occurred';
+  // Default error message
+  if (error instanceof Error) {
+    return error.message;
+  }
+  
+  if (hasProperty(error, 'message') && typeof (error as { message: unknown }).message === 'string') {
+    return (error as { message: string }).message;
+  }
+  
+  return 'Database error occurred';
 }
