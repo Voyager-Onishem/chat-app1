@@ -67,7 +67,7 @@ export const Connections = () => {
 
       // Fetch profiles for all users involved in connections
       const userIds = new Set<string>();
-      connectionsData?.forEach((conn: any) => {
+      connectionsData?.forEach((conn: DbConnection) => {
         userIds.add(conn.requester_id);
         userIds.add(conn.addressee_id);
       });
@@ -84,7 +84,7 @@ export const Connections = () => {
       });
 
       // Combine connections with profile data
-      const enrichedConnections = connectionsData?.map((conn: any) => ({
+      const enrichedConnections = connectionsData?.map((conn: DbConnection) => ({
         ...conn,
         requester: profilesMap.get(conn.requester_id),
         addressee: profilesMap.get(conn.addressee_id)
@@ -120,8 +120,8 @@ export const Connections = () => {
           return conn;
         })
       );
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to update connection"; setError(errorMessage);
     }
   };
 

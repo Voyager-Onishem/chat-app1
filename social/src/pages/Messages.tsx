@@ -187,7 +187,7 @@ const MessagesImproved: React.FC = () => {
       }
 
       // Get profiles for message senders
-      const senderIds = [...new Set(messagesData.map((m: any) => m.sender_id))];
+      const senderIds = [...new Set(messagesData.map((m: MessageProps) => m.sender_id))];
       const { data: senderProfiles, error: profilesError } = await supabase
         .from('profiles')
         .select('user_id, full_name, profile_picture_url')
@@ -199,8 +199,8 @@ const MessagesImproved: React.FC = () => {
       }
 
       // Combine messages with sender profiles
-      const messagesWithProfiles = messagesData.map((message: any) => {
-        const senderProfile = (senderProfiles || []).find((p: any) => p.user_id === message.sender_id);
+      const messagesWithProfiles = messagesData.map((message: MessageProps) => {
+        const senderProfile = (senderProfiles || []).find((p: UserProfile) => p.user_id === message.sender_id);
         return {
           ...message,
           profiles: senderProfile ? {
@@ -272,11 +272,11 @@ const MessagesImproved: React.FC = () => {
     selectedChat ? `conversation_id=eq.${selectedChat.id}` : undefined,
     {
       enabled: !!selectedChat,
-      onInsert: (payload: any) => {
+      onInsert: (payload: unknown) => {
         console.log('New message received:', payload);
         refetchMessages();
       },
-      onUpdate: (payload: any) => {
+      onUpdate: (payload: unknown) => {
         console.log('Message updated:', payload);
         refetchMessages();
       },

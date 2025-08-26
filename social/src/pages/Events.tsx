@@ -221,8 +221,8 @@ export const Events = () => {
       } else {
         setEvents([]);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to load events"; setError(errorMessage);
     }
   };
 
@@ -322,8 +322,8 @@ export const Events = () => {
       } else {
         setEvents([]);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to create event"; setError(errorMessage);
     }
   };
 
@@ -340,8 +340,8 @@ export const Events = () => {
 
       setEvents(prev => prev.filter(event => event.id !== eventId));
       setSuccess('Event deleted successfully!');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to delete event"; setError(errorMessage);
     }
   };
 

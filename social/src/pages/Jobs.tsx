@@ -89,7 +89,7 @@ const Jobs = () => {
 
         if (jobsData && jobsData.length > 0) {
           // Fetch poster profiles
-          const posterIds = [...new Set(jobsData.map((job: any) => job.posted_by_user_id))];
+          const posterIds = [...new Set(jobsData.map((job: JobType) => job.posted_by_user_id))];
           const { data: profilesData } = await supabase
             .from('profiles')
             .select('user_id, full_name, profile_picture_url, role')
@@ -97,12 +97,12 @@ const Jobs = () => {
 
           // Create profiles map
           const profilesMap = new Map();
-          profilesData?.forEach((profile: any) => {
+          profilesData?.forEach((profile: UserProfile) => {
             profilesMap.set(profile.user_id, profile);
           });
 
           // Add poster info to jobs
-          const jobsWithPosters = jobsData.map((job: any) => ({
+          const jobsWithPosters = jobsData.map((job: JobType) => ({
             ...job,
             posted_by: profilesMap.get(job.posted_by_user_id)
           }));
@@ -154,7 +154,7 @@ const Jobs = () => {
 
       if (jobsData && jobsData.length > 0) {
         // Fetch poster profiles
-        const posterIds = [...new Set(jobsData.map((job: any) => job.posted_by_user_id))];
+        const posterIds = [...new Set(jobsData.map((job: JobType) => job.posted_by_user_id))];
         const { data: profilesData } = await supabase
           .from('profiles')
           .select('user_id, full_name, profile_picture_url, role')
@@ -162,12 +162,12 @@ const Jobs = () => {
 
         // Create profiles map
         const profilesMap = new Map();
-        profilesData?.forEach((profile: any) => {
+        profilesData?.forEach((profile: UserProfile) => {
           profilesMap.set(profile.user_id, profile);
         });
 
         // Add poster info to jobs
-        const jobsWithPosters = jobsData.map((job: any) => ({
+        const jobsWithPosters = jobsData.map((job: JobType) => ({
           ...job,
           posted_by: profilesMap.get(job.posted_by_user_id)
         }));
@@ -176,8 +176,8 @@ const Jobs = () => {
       } else {
         setJobs([]);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to create job"; setError(errorMessage);
     }
   };
 
@@ -194,8 +194,8 @@ const Jobs = () => {
 
       setJobs(prev => prev.filter(job => job.id !== jobId));
       setSuccess('Job deleted successfully!');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : "Failed to delete job"; setError(errorMessage);
     }
   };
 
