@@ -3,6 +3,13 @@ import { supabase } from '../supabase-client';
 import { useSimpleAuth } from './SimpleAuthContext';
 import type { DatabaseNotification } from '../types';
 
+// Supabase realtime payload interface
+interface SupabasePayload<T = unknown> {
+  new: T;
+  old: T;
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+}
+
 interface DatabaseNotificationContextType {
   notifications: DatabaseNotification[];
   unreadCount: number;
@@ -175,8 +182,8 @@ export function DatabaseNotificationProvider({ children }: { children: React.Rea
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
           },
-          (payload: any) => {
-            setNotifications(prev => [payload.new as DatabaseNotification, ...prev]);
+          (payload: SupabasePayload<DatabaseNotification>) => {
+            setNotifications(prev => [payload.new, ...prev]);
           }
         )
         .on(
@@ -187,10 +194,10 @@ export function DatabaseNotificationProvider({ children }: { children: React.Rea
             table: 'notifications',
             filter: `user_id=eq.${user.id}`
           },
-          (payload: any) => {
+          (payload: SupabasePayload<DatabaseNotification>) => {
             setNotifications(prev => 
               prev.map(notif => 
-                notif.id === payload.new.id ? payload.new as DatabaseNotification : notif
+                notif.id === payload.new.id ? payload.new : notif
               )
             );
           }

@@ -8,7 +8,7 @@ export interface UseQueryOptions {
   enabled?: boolean;
   retry?: number;
   timeout?: number;
-  fallbackData?: any;
+  fallbackData?: unknown;
   refetchOnWindowFocus?: boolean;
 }
 
@@ -74,7 +74,7 @@ export function useQuery<T = any>(
         setFromFallback(false);
         setError(null);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.warn('Query execution error:', err);
       const errorMessage = err instanceof Error ? err.message : 'An error occurred';
       setError(errorMessage);
@@ -209,9 +209,9 @@ export function useMutation<T = any, V = any>(
  */
 export interface UseSubscriptionOptions {
   enabled?: boolean;
-  onInsert?: (payload: any) => void;
-  onUpdate?: (payload: any) => void;
-  onDelete?: (payload: any) => void;
+  onInsert?: (payload: unknown) => void;
+  onUpdate?: (payload: unknown) => void;
+  onDelete?: (payload: unknown) => void;
 }
 
 export function useSubscription(
@@ -236,7 +236,14 @@ export function useSubscription(
           table,
           filter,
         },
-        (payload: any) => {
+        (payload: unknown) => {
+          // Type guard for payload structure
+          const hasEventType = (p: unknown): p is { eventType: string } => {
+            return typeof p === 'object' && p !== null && 'eventType' in p;
+          };
+
+          if (!hasEventType(payload)) return;
+
           switch (payload.eventType) {
             case 'INSERT':
               onInsert?.(payload);
@@ -250,7 +257,7 @@ export function useSubscription(
           }
         }
       )
-      .subscribe((status: any) => {
+      .subscribe((status: unknown) => {
         setConnected(status === 'SUBSCRIBED');
         if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           setError(`Subscription error: ${status}`);
