@@ -63,9 +63,29 @@ class ConnectionManager {
       }
 
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      // Type guard for error with message
+      const getErrorMessage = (err: unknown): string => {
+        if (err instanceof Error) return err.message;
+        if (typeof err === 'object' && err !== null && 'message' in err) {
+          return String((err as { message: unknown }).message);
+        }
+        return 'Unknown error';
+      };
+
+      // Type guard for error with code
+      const getErrorCode = (err: unknown): string | undefined => {
+        if (typeof err === 'object' && err !== null && 'code' in err) {
+          return String((err as { code: unknown }).code);
+        }
+        return undefined;
+      };
+
+      const errorMessage = getErrorMessage(error);
+      const errorCode = getErrorCode(error);
+
       // Handle timeout specifically
-      if (error.message === 'Connection timeout') {
+      if (errorMessage === 'Connection timeout') {
         console.warn(`Backend connection timeout after ${this.connectionTimeout}ms`);
         this.status.isConnected = false;
         this.status.retryCount++;
@@ -73,9 +93,9 @@ class ConnectionManager {
       }
       
       // Handle other network errors
-      if (error.code === 'NETWORK_ERROR' || error.message?.includes('network')) {
+      if (errorCode === 'NETWORK_ERROR' || errorMessage.includes('network')) {
         console.warn('Network error during connection check');
-      } else if (error.message?.includes('Cloudflare') || error.message?.includes('1101') || error.message?.includes('Worker threw exception')) {
+      } else if (errorMessage.includes('Cloudflare') || errorMessage.includes('1101') || errorMessage.includes('Worker threw exception')) {
         console.warn('Cloudflare/Supabase infrastructure error detected');
       } else {
         console.error('Connection check error:', error);
@@ -112,8 +132,10 @@ class ConnectionManager {
       this.status.retryCount = 0;
       this.status.lastCheck = new Date();
       return true;
-    } catch (error: any) {
-      if (error.message === 'Fallback connection timeout') {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      
+      if (errorMessage === 'Fallback connection timeout') {
         console.warn(`Fallback connection timeout after ${this.connectionTimeout}ms`);
       } else {
         console.warn('Fallback connection check error:', error);

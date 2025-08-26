@@ -98,11 +98,31 @@ export async function robustQuery<T = any>(
       // Success
       return { data: result.data, error: null, fromFallback: false };
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       lastError = error;
       
+      // Type guard for error properties
+      const getErrorMessage = (err: unknown): string => {
+        if (err instanceof Error) return err.message;
+        if (typeof err === 'object' && err !== null && 'message' in err) {
+          return String((err as { message: unknown }).message);
+        }
+        return 'Unknown error';
+      };
+
+      const getErrorName = (err: unknown): string => {
+        if (err instanceof Error) return err.name;
+        if (typeof err === 'object' && err !== null && 'name' in err) {
+          return String((err as { name: unknown }).name);
+        }
+        return 'Error';
+      };
+
+      const errorMessage = getErrorMessage(error);
+      const errorName = getErrorName(error);
+      
       // Handle timeout and network errors
-      if (error.message === 'Query timeout' || error.name === 'NetworkError') {
+      if (errorMessage === 'Query timeout' || errorName === 'NetworkError') {
         if (attempt < retries) {
           console.warn(`Query timeout/network error, retrying... (${attempt + 1}/${retries + 1})`);
           const delay = Math.min(1000 * Math.pow(2, attempt), 5000);
@@ -144,7 +164,7 @@ export async function robustQuery<T = any>(
 /**
  * Check if an error is retryable
  */
-function isRetryableError(error: any): boolean {
+function isRetryableError(error: unknown): boolean {
   if (!error) return false;
   
   const retryableCodes = [
@@ -174,19 +194,38 @@ function isRetryableError(error: any): boolean {
     'fetch',
   ];
   
+  // Type guards for error properties
+  const hasCode = (err: unknown): err is { code: unknown } => {
+    return typeof err === 'object' && err !== null && 'code' in err;
+  };
+
+  const hasStatus = (err: unknown): err is { status: unknown } => {
+    return typeof err === 'object' && err !== null && 'status' in err;
+  };
+
+  const hasMessage = (err: unknown): err is { message: unknown } => {
+    return typeof err === 'object' && err !== null && 'message' in err;
+  };
+
   // Check error codes
-  if (error.code && retryableCodes.includes(error.code)) {
-    return true;
+  if (hasCode(error)) {
+    const code = String(error.code);
+    if (retryableCodes.includes(code)) {
+      return true;
+    }
   }
   
   // Check HTTP status codes
-  if (error.status && retryableCodes.includes(error.status.toString())) {
-    return true;
+  if (hasStatus(error)) {
+    const status = String(error.status);
+    if (retryableCodes.includes(status)) {
+      return true;
+    }
   }
   
   // Check error messages
-  if (error.message) {
-    const message = error.message.toLowerCase();
+  if (hasMessage(error)) {
+    const message = String(error.message).toLowerCase();
     return retryableMessages.some(keyword => message.includes(keyword));
   }
   

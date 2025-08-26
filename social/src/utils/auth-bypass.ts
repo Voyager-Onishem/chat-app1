@@ -6,9 +6,9 @@
 import { supabase } from '../supabase-client';
 import { mockProfiles } from './mockData';
 
-export interface AuthBypassResult<T = any> {
+export interface AuthBypassResult<T = unknown> {
   data: T | null;
-  error: any;
+  error: Error | null;
   isRealData: boolean;
   bypassUsed: boolean;
 }
@@ -196,7 +196,7 @@ export async function fetchCountWithBypass(table: string, fallbackCount: number 
 /**
  * Check if error is RLS/permissions related
  */
-function isRLSError(error: any): boolean {
+function isRLSError(error: unknown): boolean {
   if (!error) return false;
 
   // Check for common RLS/permission error indicators
