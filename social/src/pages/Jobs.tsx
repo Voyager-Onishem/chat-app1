@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabase-client';
-import { useQuery, useMutation } from '../hooks/useQuery';
+import { useJobs, useCreateJob } from '../hooks/useApiQueries';
 import { Box, Typography, CircularProgress, Alert, Button, Card, Avatar, Input, Textarea, Modal, ModalDialog, ModalClose, Chip } from '@mui/joy';
 import { Add as AddIcon, Business as BusinessIcon, LocationOn as LocationIcon } from '@mui/icons-material';
 import { useForm } from 'react-hook-form';
@@ -31,35 +31,38 @@ interface CreateJobForm {
 }
 
 const Jobs = () => {
-  const [jobs, setJobs] = useState<Job[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [userRole, setUserRole] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateJobForm>();
 
+  // Use React Query for jobs
+  const { 
+    data: jobs = [], 
+    isLoading: loading, 
+    error,
+    refetch 
+  } = useJobs();
+
+  // Create job mutation
+  const { 
+    mutate: createJob, 
+    isPending: isCreating, 
+    error: createError 
+  } = useCreateJob({
+    onSuccess: () => {
+      setShowCreateModal(false);
+      reset();
+    }
+  });
+
+  // Fetch current user on mount
   useEffect(() => {
-    const fetchJobs = async () => {
-      setLoading(true);
-      setError('');
-      
-      // Add timeout to prevent infinite loading
-      const timeoutId = setTimeout(() => {
-        console.warn('Jobs loading timeout - forcing loading to false');
-        setLoading(false);
-      }, 5000);
-      
+    const fetchCurrentUser = async () => {
       try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        if (userError || !user) {
-          setError('Not logged in.');
-          setLoading(false);
-          clearTimeout(timeoutId);
-          return;
-        }
+        if (userError || !user) return;
         
         setCurrentUser(user);
 
@@ -73,54 +76,12 @@ const Jobs = () => {
         if (profile) {
           setUserRole(profile.role);
         }
-
-        // Fetch jobs
-        const { data: jobsData, error } = await supabase
-          .from('jobs')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          setError(error.message);
-          setLoading(false);
-          clearTimeout(timeoutId);
-          return;
-        }
-
-        if (jobsData && jobsData.length > 0) {
-          // Fetch poster profiles
-          const posterIds = [...new Set(jobsData.map((job: any) => job.posted_by_user_id))];
-          const { data: profilesData } = await supabase
-            .from('profiles')
-            .select('user_id, full_name, profile_picture_url, role')
-            .in('user_id', posterIds);
-
-          // Create profiles map
-          const profilesMap = new Map();
-          profilesData?.forEach((profile: any) => {
-            profilesMap.set(profile.user_id, profile);
-          });
-
-          // Add poster info to jobs
-          const jobsWithPosters = jobsData.map((job: any) => ({
-            ...job,
-            posted_by: profilesMap.get(job.posted_by_user_id)
-          }));
-
-          setJobs(jobsWithPosters);
-        } else {
-          setJobs([]);
-        }
       } catch (error) {
-        console.error('Error fetching jobs:', error);
-        setError('Failed to load jobs');
-      } finally {
-        setLoading(false);
-        clearTimeout(timeoutId);
+        console.error('Error fetching current user:', error);
       }
     };
 
-    fetchJobs();
+    fetchCurrentUser();
   }, []);
 
   const canPostJobs = () => {
@@ -128,57 +89,16 @@ const Jobs = () => {
   };
 
   const handleCreateJob = async (formData: CreateJobForm) => {
-    try {
-      const { error } = await supabase
-        .from('jobs')
-        .insert({
-          posted_by_user_id: currentUser.id,
-          title: formData.title,
-          company: formData.company,
-          location: formData.location || null,
-          description: formData.description,
-          apply_url: formData.apply_url || null
-        });
-
-      if (error) throw error;
-
-      setSuccess('Job posted successfully!');
-      setShowCreateModal(false);
-      reset();
-
-      // Refresh jobs
-      const { data: jobsData } = await supabase
-        .from('jobs')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (jobsData && jobsData.length > 0) {
-        // Fetch poster profiles
-        const posterIds = [...new Set(jobsData.map((job: any) => job.posted_by_user_id))];
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('user_id, full_name, profile_picture_url, role')
-          .in('user_id', posterIds);
-
-        // Create profiles map
-        const profilesMap = new Map();
-        profilesData?.forEach((profile: any) => {
-          profilesMap.set(profile.user_id, profile);
-        });
-
-        // Add poster info to jobs
-        const jobsWithPosters = jobsData.map((job: any) => ({
-          ...job,
-          posted_by: profilesMap.get(job.posted_by_user_id)
-        }));
-
-        setJobs(jobsWithPosters);
-      } else {
-        setJobs([]);
-      }
-    } catch (err: any) {
-      setError(err.message);
-    }
+    if (!currentUser) return;
+    
+    createJob({
+      title: formData.title,
+      company: formData.company,
+      location: formData.location || '',
+      description: formData.description,
+      apply_url: formData.apply_url || undefined,
+      posted_by_user_id: currentUser.id,
+    });
   };
 
   const handleDeleteJob = async (jobId: string) => {
@@ -191,11 +111,11 @@ const Jobs = () => {
         .eq('id', jobId);
 
       if (error) throw error;
-
-      setJobs(prev => prev.filter(job => job.id !== jobId));
-      setSuccess('Job deleted successfully!');
+      
+      // Refetch jobs to update the list
+      refetch();
     } catch (err: any) {
-      setError(err.message);
+      console.error('Error deleting job:', err);
     }
   };
 
@@ -206,7 +126,7 @@ const Jobs = () => {
   );
 
   if (loading) return <Box sx={{ mt: 8, textAlign: 'center' }}><CircularProgress /></Box>;
-  if (error) return <Box sx={{ mt: 8 }}><Alert color="danger">{error}</Alert></Box>;
+  if (error) return <Box sx={{ mt: 8 }}><Alert color="danger">{error.message}</Alert></Box>;
 
   return (
     <Box sx={{ maxWidth: 1000, mx: 'auto', mt: 8 }}>
@@ -222,7 +142,7 @@ const Jobs = () => {
         )}
       </Box>
 
-      {success && <Alert color="success" sx={{ mb: 2 }}>{success}</Alert>}
+      {createError && <Alert color="danger" sx={{ mb: 2 }}>{createError.message}</Alert>}
 
       {/* Search Bar */}
       <Box sx={{ mb: 3 }}>

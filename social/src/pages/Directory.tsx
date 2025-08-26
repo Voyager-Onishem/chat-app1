@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSimpleAuth } from '../context/SimpleAuthContext';
-import { profileService, connectionService } from '../services/api';
-import { useQuery, useMutation } from '../hooks/useQuery';
+import { useProfiles, useSendConnectionRequest } from '../hooks/useApiQueries';
 import { mockProfiles } from '../utils/mockData';
 import { ProfileCardSkeleton } from '../components/common/LoadingSpinner';
 import { getErrorMessage } from '../utils/errorHandling';
@@ -44,42 +43,36 @@ export const Directory: React.FC = () => {
   const [locations, setLocations] = useState<string[]>([]);
   const [companies, setCompanies] = useState<string[]>([]);
 
-  // Fetch profiles with error handling and fallback
+  // Fetch profiles with enhanced filtering and error handling
   const {
     data: profiles,
-    loading,
+    isLoading: loading,
     error,
     refetch,
-    fromFallback
-  } = useQuery<UserProfile[]>(
-    'profiles',
-    () => profileService.getProfiles(),
-    {
-      fallbackData: mockProfiles,
-      enabled: true,
-      retry: 3,
-      timeout: 15000,
-      refetchOnWindowFocus: true,
-    }
-  );
+    isStale
+  } = useProfiles({
+    role: selectedRole !== 'all' ? selectedRole : undefined,
+    location: selectedLocation !== 'all' ? selectedLocation : undefined,
+    company: selectedCompany !== 'all' ? selectedCompany : undefined,
+    graduationYearRange: graduationYearRange,
+  }, {
+    // Use empty array as placeholder instead of mockProfiles due to type issues
+    placeholderData: [],
+  });
 
-  // Connection request mutation
+  // Connection request mutation with optimistic updates
   const {
     mutate: sendConnectionRequest,
-    loading: connectionLoading,
+    isPending: connectionLoading,
     error: connectionError,
-  } = useMutation(
-    ({ addresseeId }: { addresseeId: string }) =>
-      connectionService.sendConnectionRequest(user!.id, addresseeId),
-    {
-      onSuccess: () => {
-        console.log('Connection request sent successfully');
-      },
-      onError: (error) => {
-        console.error('Failed to send connection request:', error);
-      },
-    }
-  );
+  } = useSendConnectionRequest({
+    onSuccess: () => {
+      console.log('Connection request sent successfully');
+    },
+    onError: (error) => {
+      console.error('Failed to send connection request:', error);
+    },
+  });
 
   // Extract filter options when profiles data changes
   useEffect(() => {
@@ -143,7 +136,7 @@ export const Directory: React.FC = () => {
 
   const handleConnect = useCallback((addresseeId: string) => {
     if (!user) return;
-    sendConnectionRequest({ addresseeId });
+    sendConnectionRequest({ requesterId: user.id, addresseeId });
   }, [user, sendConnectionRequest]);
 
   const ProfileCard: React.FC<{ profile: UserProfile }> = React.memo(({ profile }) => (
@@ -257,10 +250,10 @@ export const Directory: React.FC = () => {
           Connect with fellow alumni and expand your professional network.
         </Typography>
 
-        {fromFallback && (
+        {isStale && profiles && profiles.length === 0 && (
           <Alert color="warning" sx={{ mb: 3 }}>
             Using sample data. Please check your internet connection and try refreshing.
-            <Button variant="plain" size="sm" onClick={refetch} sx={{ ml: 2 }}>
+            <Button variant="plain" size="sm" onClick={() => refetch()} sx={{ ml: 2 }}>
               Retry
             </Button>
           </Alert>
@@ -269,7 +262,7 @@ export const Directory: React.FC = () => {
         {error && (
           <Alert color="danger" sx={{ mb: 3 }}>
             {getErrorMessage(error)}
-            <Button variant="plain" size="sm" onClick={refetch} sx={{ ml: 2 }}>
+            <Button variant="plain" size="sm" onClick={() => refetch()} sx={{ ml: 2 }}>
               Retry
             </Button>
           </Alert>

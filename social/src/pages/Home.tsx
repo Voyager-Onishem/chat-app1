@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSimpleAuth } from '../context/SimpleAuthContext';
-import { useQuery } from '../hooks/useQuery';
 import { supabase } from '../supabase-client';
 import { Box, Typography, Button, Card, Grid, Avatar, Stack, Divider } from '@mui/joy';
 import { PeopleRounded, WorkRounded, EventRounded, AnnouncementRounded, TrendingUpRounded } from '@mui/icons-material';

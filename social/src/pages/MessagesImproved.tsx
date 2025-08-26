@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useSimpleAuth } from '../context/SimpleAuthContext';
-import { useQuery, useMutation, useSubscription } from '../hooks/useQuery';
+import { useConversations, useMessages, useSendMessage } from '../hooks/useApiQueries';
 import { useNotifications } from '../context/NotificationContext';
 import { supabase } from '../supabase-client';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
@@ -40,157 +40,86 @@ const MessagesImproved: React.FC = () => {
   const { error: notifyError, success } = useNotifications();
   const [selectedChat, setSelectedChat] = useState<ChatProps | null>(null);
 
-  // Fetch conversations with robust error handling
+  // Fetch conversations using React Query
   const {
-    data: conversations,
-    loading: conversationsLoading,
+    data: rawConversations = [],
+    isLoading: conversationsLoading,
     error: conversationsError,
     refetch: refetchConversations,
-    fromFallback,
-  } = useQuery<ChatProps[]>(
-    'conversations',
-    async () => {
-      if (!user) throw new Error('User not authenticated');
+  } = useConversations(user?.id || '', {
+    enabled: !!user,
+  });
 
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          created_at,
-          conversation_participants!inner(
-            user_id,
-            profiles!inner(
-              user_id,
-              full_name,
-              profile_picture_url,
-              role
-            )
-          )
-        `)
-        .eq('conversation_participants.user_id', user.id);
+  // Transform conversations to ChatProps format
+  const conversations: ChatProps[] = rawConversations.map((conv: any) => {
+    const otherParticipant = conv.participants?.find(
+      (p: any) => p.user_id !== user?.id
+    );
+    const profile = otherParticipant?.profile;
+    
+    return {
+      id: conv.id,
+      created_at: conv.created_at,
+      participants: conv.participants || [],
+      sender: profile ? {
+        name: profile.full_name,
+        username: `@${profile.full_name.toLowerCase().replace(/\s+/g, '')}`,
+        avatar: profile.profile_picture_url || '/static/images/avatar/default.jpg',
+        online: true,
+      } : undefined,
+      messages: [],
+    };
+  });
 
-      if (error) throw error;
-
-      return (data || []).map((conv: Conversation) => {
-        const otherParticipant = conv.conversation_participants.find(
-          (p: ConversationParticipant) => p.user_id !== user.id
-        );
-        const profile = otherParticipant?.profiles;
-        
-        return {
-          id: conv.id,
-          created_at: conv.created_at,
-          participants: conv.conversation_participants,
-          sender: profile ? {
-            name: profile.full_name,
-            username: `@${profile.full_name.toLowerCase().replace(/\s+/g, '')}`,
-            avatar: profile.profile_picture_url || '/static/images/avatar/default.jpg',
-            online: true,
-          } : undefined,
-          messages: [],
-        };
-      });
-    },
-    {
-      enabled: !!user,
-      fallbackData: mockConversations,
-      retry: 2,
-      timeout: 10000,
-      refetchOnWindowFocus: false, // Keep false for conversations due to real-time subscriptions
-    }
-  );
-
-  // Fetch messages for selected conversation
+  // Fetch messages for selected conversation using React Query
   const {
-    data: messages,
-    loading: messagesLoading,
+    data: rawMessages = [],
+    isLoading: messagesLoading,
     refetch: refetchMessages,
-  } = useQuery<MessageProps[]>(
-    `messages-${selectedChat?.id}`,
-    async () => {
-      if (!selectedChat) return [];
+  } = useMessages(selectedChat?.id || '', {
+    enabled: !!selectedChat?.id,
+  });
 
-      const { data, error } = await supabase
-        .from('messages')
-        .select(`
-          *,
-          profiles!inner(
-            full_name,
-            profile_picture_url
-          )
-        `)
-        .eq('conversation_id', selectedChat.id)
-        .order('created_at', { ascending: true });
-
-      if (error) throw error;
-      return data || [];
+  // Transform messages to MessageProps format
+  const messages: MessageProps[] = rawMessages.map((msg: any) => ({
+    id: msg.id,
+    content: msg.content,
+    timestamp: msg.created_at,
+    sender: {
+      id: msg.sender_id,
+      name: msg.sender?.full_name || 'Unknown',
+      username: `@${msg.sender?.full_name?.toLowerCase().replace(/\s+/g, '') || 'unknown'}`,
+      avatar: msg.sender?.profile_picture_url || '/static/images/avatar/default.jpg',
+      online: true,
     },
-    {
-      enabled: !!selectedChat,
-      retry: 2,
-      timeout: 10000,
-      refetchOnWindowFocus: true, // Enable for messages to get updates on focus
-    }
-  );
+  }));
 
-  // Send message mutation
+  // Send message mutation using React Query
   const {
     mutate: sendMessage,
-    loading: sendingMessage,
+    isPending: sendingMessage,
     error: sendMessageError,
-  } = useMutation(
-    async ({ content, conversationId }: { content: string; conversationId: string }) => {
-      if (!user) throw new Error('User not authenticated');
-
-      const { data, error } = await supabase
-        .from('messages')
-        .insert({
-          content: content.trim(),
-          conversation_id: conversationId,
-          sender_id: user.id,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
+  } = useSendMessage({
+    onSuccess: () => {
+      success('Message sent successfully');
     },
-    {
-      onSuccess: () => {
-        refetchMessages();
-        success('Message sent successfully');
-      },
-      onError: (error) => {
-        notifyError(getErrorMessage(error), 'Failed to send message');
-      },
-    }
-  );
-
-  // Real-time subscription for new messages
-  useSubscription(
-    'messages',
-    selectedChat ? `conversation_id=eq.${selectedChat.id}` : undefined,
-    {
-      enabled: !!selectedChat,
-      onInsert: (payload: any) => {
-        console.log('New message received:', payload);
-        refetchMessages();
-      },
-      onUpdate: (payload: any) => {
-        console.log('Message updated:', payload);
-        refetchMessages();
-      },
-    }
-  );
+    onError: (error: any) => {
+      notifyError(getErrorMessage(error), 'Failed to send message');
+    },
+  });
 
   const handleChatSelect = useCallback((chat: ChatProps) => {
     setSelectedChat(chat);
   }, []);
 
   const handleSendMessage = useCallback((content: string) => {
-    if (!selectedChat || !content.trim()) return;
-    sendMessage({ content, conversationId: selectedChat.id });
-  }, [selectedChat, sendMessage]);
+    if (!selectedChat || !content.trim() || !user) return;
+    sendMessage({ 
+      content, 
+      conversationId: selectedChat.id,
+      senderId: user.id 
+    });
+  }, [selectedChat, sendMessage, user]);
 
   // Show loading state
   if (conversationsLoading) {
@@ -198,7 +127,7 @@ const MessagesImproved: React.FC = () => {
   }
 
   // Show error state with retry option
-  if (conversationsError && !fromFallback) {
+  if (conversationsError) {
     return (
       <Box
         sx={{
@@ -218,7 +147,7 @@ const MessagesImproved: React.FC = () => {
           <Typography level="body-md" sx={{ mb: 2 }}>
             {getErrorMessage(conversationsError)}
           </Typography>
-          <Button onClick={refetchConversations} variant="outlined">
+          <Button onClick={() => refetchConversations()} variant="outlined">
             Try Again
           </Button>
         </Alert>
