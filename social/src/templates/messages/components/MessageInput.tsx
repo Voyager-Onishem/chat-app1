@@ -11,11 +11,11 @@ import StrikethroughSRoundedIcon from '@mui/icons-material/StrikethroughSRounded
 import FormatListBulletedRoundedIcon from '@mui/icons-material/FormatListBulletedRounded';
 import SendRoundedIcon from '@mui/icons-material/SendRounded';
 
-export type MessageInputProps = {
+export interface MessageInputProps {
   textAreaValue: string;
   setTextAreaValue: (value: string) => void;
   onSubmit: () => void;
-};
+}
 
 export default function MessageInput(props: MessageInputProps) {
   const { textAreaValue, setTextAreaValue, onSubmit } = props;
